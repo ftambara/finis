@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
 )
 
 func home(w http.ResponseWriter, req *http.Request) {
@@ -11,8 +13,8 @@ func home(w http.ResponseWriter, req *http.Request) {
 }
 
 func run(ctx context.Context, address string) error {
-	// TODO(ftambara): Close context on interrupt/stop signals
-	// TODO(ftambara): Change this so we can work with httptest.NewServer
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT)
+	defer cancel()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", home)
