@@ -27,7 +27,10 @@ func waitForReady(
 			fmt.Printf("Error making request: %s\n", err.Error())
 			continue
 		}
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close body: %w", err)
+		}
 		if resp.StatusCode == http.StatusOK {
 			fmt.Println("Endpoint is ready.")
 			return nil
