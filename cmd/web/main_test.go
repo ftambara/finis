@@ -1,0 +1,67 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"testing"
+	"time"
+)
+
+func waitForReady(
+	ctx context.Context,
+	timeout time.Duration,
+	endpoint string,
+) error {
+	client := http.Client{}
+	startTime := time.Now()
+	sleepDuration := 100 * time.Millisecond
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Printf("Error making request: %s\n", err.Error())
+			continue
+		}
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			fmt.Println("Endpoint is ready.")
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if time.Since(startTime) >= timeout {
+				return errors.New("timeout reached while waiting for endpoint")
+			}
+			time.Sleep(sleepDuration)
+		}
+	}
+}
+
+func TestRun(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	var runErr error
+	go func() {
+		runErr = run(ctx, ":9658")
+	}()
+	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
+	if err != nil {
+		if runErr != nil {
+			fmt.Printf("Error running the server: %s\n", runErr.Error())
+		}
+		t.Fatal(err)
+	}
+	if runErr != nil {
+		t.Fatal(err)
+	}
+}
