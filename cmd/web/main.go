@@ -12,8 +12,10 @@ import (
 	"syscall"
 )
 
-var projectRoot string
-var templateDir string
+var (
+	projectRoot string
+	templateDir string
+)
 
 func init() {
 	// Initialize project directory variables.
