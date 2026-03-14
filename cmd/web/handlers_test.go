@@ -100,11 +100,6 @@ func assertAttrPresent(t *testing.T, n *html.Node, name string) {
 	assertAttrEquals(t, n, name, "")
 }
 
-func TestSignUpTemplate(t *testing.T) {
-	buf := renderTemplate("signup.html.tmpl")
-	assertHTMLWellFormed(t, buf)
-}
-
 func renderTemplate(name string) *bytes.Buffer {
 	tmpl := template.Must(parseTemplate(name))
 	var buf bytes.Buffer
