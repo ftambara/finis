@@ -20,17 +20,7 @@ func TestGetSignUp(t *testing.T) {
 	tmpl := template.Must(parseTemplate("signup.html.tmpl"))
 	SignUpGet(tmpl)(res, req)
 
-	if res.Code != http.StatusOK {
-		t.Errorf("got status %v but wanted %v", res.Code, http.StatusOK)
-	}
-	if res.Body.Len() == 0 {
-		t.Fatal("received empty response body")
-	}
-
-	document, err := html.Parse(res.Body)
-	if err != nil {
-		t.Fatalf("error parssing response body as HTML: %s", err)
-	}
+	document := parseHTMLResponse(t, res)
 
 	emailNode := htmlGet(document, "input#user-email")
 	assertAttrEquals(t, emailNode, "type", "email")
@@ -43,6 +33,28 @@ func TestGetSignUp(t *testing.T) {
 	passwordConfirmationNode := htmlGet(document, "input#user-password-confirmation")
 	assertAttrEquals(t, passwordConfirmationNode, "type", "password")
 	assertAttrPresent(t, passwordConfirmationNode, "required")
+}
+
+func parseHTMLResponse(t *testing.T, res *httptest.ResponseRecorder) *html.Node {
+	if res.Code != http.StatusOK {
+		t.Errorf("got status %v but wanted %v", res.Code, http.StatusOK)
+	}
+	if res.Body.Len() == 0 {
+		t.Fatal("received empty response body")
+	}
+	r := bytes.NewReader(res.Body.Bytes())
+	assertHTMLWellFormed(t, r)
+
+	_, err := r.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatalf("error rewinding body reader: %s", err)
+	}
+
+	document, err := html.Parse(r)
+	if err != nil {
+		t.Fatalf("error parssing response body as HTML: %s", err)
+	}
+	return document
 }
 
 func htmlGet(n *html.Node, query string) *html.Node {
