@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-func TestGetSignUp(t *testing.T) {
+func TestSignUpGet(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/sign-up", http.NoBody)
 	res := httptest.NewRecorder()
 
