@@ -24,7 +24,7 @@ func waitForReady(
 		}
 		resp, err := client.Do(req)
 		if err != nil {
-			fmt.Printf("Error making request: %s\n", err.Error())
+			fmt.Printf("Error making request: %s\n", err)
 			continue
 		}
 		err = resp.Body.Close()
@@ -60,7 +60,7 @@ func TestRun(t *testing.T) {
 	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
 	if err != nil {
 		if runErr != nil {
-			fmt.Printf("Error running the server: %s\n", runErr.Error())
+			fmt.Printf("Error running the server: %s\n", runErr)
 		}
 		t.Fatal(err)
 	}
