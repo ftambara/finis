@@ -50,8 +50,7 @@ func run(ctx context.Context, address string) error {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", home)
+	mux := NewMultiplexer()
 
 	server := http.Server{
 		Addr:     address,

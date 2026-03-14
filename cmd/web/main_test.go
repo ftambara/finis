@@ -22,9 +22,8 @@ func waitForReady(
 		if err != nil {
 			return fmt.Errorf("failed to create request: %w", err)
 		}
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Printf("Error making request: %s\n", err)
+		resp, respErr := client.Do(req)
+		if respErr != nil {
 			continue
 		}
 		err = resp.Body.Close()
@@ -41,6 +40,9 @@ func waitForReady(
 			return ctx.Err()
 		default:
 			if time.Since(startTime) >= timeout {
+				if respErr != nil {
+					fmt.Printf("Error making request: %s\n", respErr)
+				}
 				return errors.New("timeout reached while waiting for endpoint")
 			}
 			time.Sleep(sleepDuration)
@@ -66,5 +68,32 @@ func TestRun(t *testing.T) {
 	}
 	if runErr != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSignUp(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	var runErr error
+	go func() {
+		runErr = run(ctx, ":9658")
+	}()
+	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
+	if err != nil {
+		panic(err)
+	}
+	if runErr != nil {
+		panic(runErr)
+	}
+
+	client := http.Client{}
+	res, err := client.Get("http://127.0.0.1:9658/sign-up")
+	if err != nil {
+		t.Fatalf("error getting sign-up: %v", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("sign-up page status code is not 200 OK: %v", res.StatusCode)
 	}
 }
