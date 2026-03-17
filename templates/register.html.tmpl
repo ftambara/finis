@@ -1,10 +1,10 @@
 {{define "main"}}
 <section>
     <div>
-        <h2>Sign up</h2>
+        <h2>Create an account</h2>
         <p>Already have an account? <a href="/sign-in">Sign in</a>.</p>
         <div>
-            <form id="new-user" class="new-user" action="/sign-up" method="post" accept-charset="UTF-8">
+            <form id="new-user" class="new-user" action="/accounts" method="post" accept-charset="UTF-8">
                 {{if not .Errors.Empty}}
                 <div>
                     <ul>
@@ -54,7 +54,7 @@
                     <label for="tos">I've read and agree to vote for you in the next Holy Roman Empire elections.</label>
                 </div>
                 <div>
-                    <button type="submit">Sign up</button>
+                    <button type="submit">Create account</button>
                 </div>
             </form>
         </div>

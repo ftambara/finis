@@ -71,7 +71,7 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestSignUp(t *testing.T) {
+func TestRegistration(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
@@ -89,11 +89,14 @@ func TestSignUp(t *testing.T) {
 	}
 
 	client := http.Client{}
-	res, err := client.Get("http://127.0.0.1:9658/sign-up")
+	res, err := client.Get("http://127.0.0.1:9658/register")
 	if err != nil {
-		t.Fatalf("error getting sign-up: %v", err)
+		t.Fatalf("error getting registration page: %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("sign-up page status code is not 200 OK: %v", res.StatusCode)
+		t.Fatalf("registration page status code is not 200 OK: %v", res.StatusCode)
 	}
+
+	// Send form
+	// ...
 }

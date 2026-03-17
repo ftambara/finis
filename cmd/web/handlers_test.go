@@ -2,23 +2,66 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"html/template"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/andybalholm/cascadia"
 	"golang.org/x/net/html"
 )
 
-func TestSignUpGet(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/sign-up", http.NoBody)
+type StubUserStore struct {
+	users  map[UserID]*User
+	nextID int
+}
+
+var _ UserStore = (*StubUserStore)(nil)
+
+func NewStubUserStore() *StubUserStore {
+	return &StubUserStore{
+		users:  make(map[UserID]*User),
+		nextID: 1,
+	}
+}
+
+func (s *StubUserStore) Create(ctx context.Context, Email string, Password string) (*User, error) {
+	// Uncomfortable: Must use the entity constructor on every store implementation.
+	user := &User{ID: s.getNextID(), Email: Email, Password: Password}
+	s.users[user.ID] = user
+	return user, nil
+}
+
+func (s *StubUserStore) All(ctx context.Context) ([]*User, error) {
+	return slices.Collect(maps.Values(s.users)), nil
+}
+
+func (s *StubUserStore) FetchByID(ctx context.Context, id UserID) (*User, error) {
+	user, ok := s.users[id]
+	if !ok {
+		return nil, ErrUserNotFound
+	}
+	return user, nil
+}
+
+func (s *StubUserStore) getNextID() UserID {
+	id := s.nextID
+	s.nextID++
+	return id
+}
+
+func TestRegistrationGet(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/register", http.NoBody)
 	res := httptest.NewRecorder()
 
-	tmpl := template.Must(parseTemplate("signup.html.tmpl"))
-	SignUpGet(tmpl)(res, req)
+	tmpl := template.Must(parseTemplate("register.html.tmpl"))
+	RegistrationGet(tmpl)(res, req)
 
 	document := parseHTMLResponse(t, res)
 
@@ -33,6 +76,63 @@ func TestSignUpGet(t *testing.T) {
 	passwordConfirmationNode := htmlGet(document, "input#user-password-confirmation")
 	assertAttrEquals(t, passwordConfirmationNode, "type", "password")
 	assertAttrPresent(t, passwordConfirmationNode, "required")
+}
+
+func TestAccountsCreate(t *testing.T) {
+	// TODO(ftambara): Test password strength.
+	t.Run("can create a valid user", func(t *testing.T) {
+		userStore := NewStubUserStore()
+
+		user := UserCreateForm{Email: "email", Password: "secret", PasswordConfirmation: "secret"}
+		form, err := user.EncodeForm()
+		if err != nil {
+			t.Fatalf("failed to marshal user to form: %v", err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := httptest.NewRecorder()
+
+		tmpl := template.Must(parseTemplate("register.html.tmpl"))
+		AccountsCreate(tmpl, userStore)(res, req)
+
+		if res.Code != http.StatusSeeOther {
+			t.Errorf("got status %v but wanted %v", res.Code, http.StatusSeeOther)
+		}
+
+		// Assert we have be redirected.
+		wantLocation := "/accounts/verify"
+		gotLocation := res.Header().Get("Location")
+		if gotLocation != wantLocation {
+			t.Errorf("got location header value %v, wanted %v", gotLocation, wantLocation)
+		}
+
+		// Assert the email has been sent.
+		// ...
+
+		// Assert the user has been created
+		if len(userStore.users) != 1 {
+			t.Fatalf("got %d user in the store, want %v", len(userStore.users), 1)
+		}
+
+		expectedUserID := 1
+		created, ok := userStore.users[expectedUserID]
+		if created == nil {
+			t.Fatal("created user is nil")
+		}
+		if !ok {
+			t.Fatalf("user with ID %v not found", expectedUserID)
+		}
+
+		expected := User{
+			ID:    expectedUserID,
+			Email: user.Email,
+			// TODO(ftambara): Stop storing plain-text passwords.
+			Password: user.Password,
+		}
+		if *created != expected {
+			t.Errorf("created user: %+v, expected:  %+v", created, expected)
+		}
+	})
 }
 
 func parseHTMLResponse(t *testing.T, res *httptest.ResponseRecorder) *html.Node {
@@ -98,17 +198,6 @@ func assertAttrEquals(t *testing.T, n *html.Node, name string, valWant string) {
 func assertAttrPresent(t *testing.T, n *html.Node, name string) {
 	t.Helper()
 	assertAttrEquals(t, n, name, "")
-}
-
-func renderTemplate(name string) *bytes.Buffer {
-	tmpl := template.Must(parseTemplate(name))
-	var buf bytes.Buffer
-	// TODO(ftambara): Test non-nil template data rendering
-	err := tmpl.Execute(&buf, nil)
-	if err != nil {
-		panic(err)
-	}
-	return &buf
 }
 
 var assertHTMLWellFormed = assertHTMLWellFormedXML

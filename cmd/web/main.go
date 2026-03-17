@@ -74,9 +74,10 @@ func home(w http.ResponseWriter, req *http.Request) {
 }
 
 func NewMultiplexer() *http.ServeMux {
-	tmpl := template.Must(parseTemplate("signup.html.tmpl"))
+	tmpl := template.Must(parseTemplate("register.html.tmpl"))
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("GET /sign-up", SignUpGet(tmpl))
+	mux.HandleFunc("GET /register", RegistrationGet(tmpl))
+	// mux.HandleFunc("GET /accounts/create", AccountsCreate(tmpl))
 	return mux
 }

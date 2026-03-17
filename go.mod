@@ -6,6 +6,7 @@ tool mvdan.cc/gofumpt
 
 require (
 	github.com/andybalholm/cascadia v1.3.3
+	github.com/gorilla/schema v1.4.1
 	golang.org/x/net v0.46.0
 )
 
