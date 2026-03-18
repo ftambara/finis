@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/xml"
 	"html/template"
 	"io"
@@ -13,13 +14,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alexedwards/scs/v2"
+	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/andybalholm/cascadia"
 	"golang.org/x/net/html"
 )
 
+const SessionCookieName = "session"
+
 type StubUserStore struct {
 	users  map[UserID]*User
-	nextID int
+	nextID int32
 }
 
 var _ UserStore = (*StubUserStore)(nil)
@@ -78,61 +83,101 @@ func TestRegistrationGet(t *testing.T) {
 	assertAttrPresent(t, passwordConfirmationNode, "required")
 }
 
+type stubSessionMiddleware struct {
+	Session *scs.SessionManager
+}
+
+func newStubSessionMiddleware() *stubSessionMiddleware {
+	session := scs.New()
+	session.Store = memstore.New()
+	return &stubSessionMiddleware{Session: session}
+}
+
+func (m *stubSessionMiddleware) Then(next http.Handler) http.Handler {
+	return m.Session.LoadAndSave(next)
+}
+
 func TestAccountsCreate(t *testing.T) {
 	// TODO(ftambara): Test password strength.
 	t.Run("can create a valid user", func(t *testing.T) {
+		ctx := context.Background()
+
 		userStore := NewStubUserStore()
 
-		user := UserCreateForm{Email: "email", Password: "secret", PasswordConfirmation: "secret"}
-		form, err := user.EncodeForm()
+		userForm := UserCreateForm{Email: "email", Password: "secret", PasswordConfirmation: "secret"}
+		form, err := userForm.EncodeForm()
 		if err != nil {
 			t.Fatalf("failed to marshal user to form: %v", err)
 		}
+
 		req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := httptest.NewRecorder()
 
+		middle := newStubSessionMiddleware()
 		tmpl := template.Must(parseTemplate("register.html.tmpl"))
-		AccountsCreate(tmpl, userStore)(res, req)
+		middle.Then(AccountsCreate(tmpl, userStore, middle.Session)).ServeHTTP(res, req)
 
+		// Assert the response asks for a redirection.
 		if res.Code != http.StatusSeeOther {
 			t.Errorf("got status %v but wanted %v", res.Code, http.StatusSeeOther)
 		}
-
-		// Assert we have be redirected.
 		wantLocation := "/accounts/verify"
 		gotLocation := res.Header().Get("Location")
 		if gotLocation != wantLocation {
 			t.Errorf("got location header value %v, wanted %v", gotLocation, wantLocation)
 		}
 
+		token := assertSessionCookie(t, res.Result())
+
 		// Assert the email has been sent.
 		// ...
 
-		// Assert the user has been created
+		// Assert the user has been created correctly
 		if len(userStore.users) != 1 {
 			t.Fatalf("got %d user in the store, want %v", len(userStore.users), 1)
 		}
 
-		expectedUserID := 1
-		created, ok := userStore.users[expectedUserID]
-		if created == nil {
-			t.Fatal("created user is nil")
-		}
-		if !ok {
-			t.Fatalf("user with ID %v not found", expectedUserID)
+		var expectedUserID UserID = 1
+		created, err := userStore.FetchByID(ctx, expectedUserID)
+		if err != nil {
+			t.Fatalf("error looking for user with id %d", expectedUserID)
 		}
 
 		expected := User{
 			ID:    expectedUserID,
-			Email: user.Email,
+			Email: userForm.Email,
 			// TODO(ftambara): Stop storing plain-text passwords.
-			Password: user.Password,
+			Password: userForm.Password,
 		}
 		if *created != expected {
 			t.Errorf("created user: %+v, expected:  %+v", created, expected)
 		}
+
+		assertUserIDInSession(t, middle.Session, token, expectedUserID)
 	})
+}
+
+// assertSessionCookie checks that the session has been set, and it was linked to the right account.
+//
+// Returns the token string.
+func assertSessionCookie(t *testing.T, res *http.Response) string {
+	t.Helper()
+
+	cookies := res.Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("got %d cookies, want %d", len(cookies), 1)
+	}
+	tokenCookie := cookies[0]
+	if tokenCookie.Name != SessionCookieName {
+		t.Fatalf("wanted token cookie name to be '%s', got '%s'", SessionCookieName, tokenCookie.Name)
+	}
+	sessionTokenBytes := len(decodeSessionToken(tokenCookie.Value))
+	if sessionTokenBytes != SessionTokenBytes {
+		t.Errorf("session token length was %d, want %d", sessionTokenBytes, SessionTokenBytes)
+	}
+
+	return tokenCookie.Value
 }
 
 func parseHTMLResponse(t *testing.T, res *httptest.ResponseRecorder) *html.Node {
@@ -234,5 +279,36 @@ func assertHTMLWellFormedXML(t *testing.T, buffer io.Reader) {
 		default:
 			t.Fatalf("Error parsing HTML: %s", err)
 		}
+	}
+}
+
+func decodeSessionToken(encoded string) []byte {
+	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		panic(err)
+	}
+	return decoded
+}
+
+func assertUserIDInSession(t *testing.T, session *scs.SessionManager, token string, expectedID UserID) {
+	t.Helper()
+
+	b, found, err := session.Store.Find(token)
+	if err != nil {
+		t.Fatalf("error finding session in store: %v", err)
+	}
+	if !found {
+		t.Errorf("session not found in store")
+	}
+	_, values, err := session.Codec.Decode(b)
+	if err != nil {
+		t.Fatalf("error decoding session data: %v", err)
+	}
+	gotUserID, ok := values[SessionKeyUserID]
+	if !ok {
+		t.Fatalf("user ID not associated to session")
+	}
+	if gotUserID != expectedID {
+		t.Errorf("got user ID %d from session, wanted %d", gotUserID, expectedID)
 	}
 }

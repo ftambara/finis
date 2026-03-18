@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/alexedwards/scs/v2"
 	"github.com/gorilla/schema"
 )
+
+const SessionKeyUserID = "authenticatedUserID"
 
 var (
 	// According to gorilla/schema:
@@ -34,7 +37,7 @@ type UserStore interface {
 	FetchByID(ctx context.Context, id UserID) (*User, error)
 }
 
-type UserID = int
+type UserID = int32
 
 type User struct {
 	ID       UserID
@@ -76,7 +79,9 @@ type SessionToken [20]byte
 
 // TODO(ftambara): Track guest users with a session-attach middleware
 
-func AccountsCreate(tmpl *template.Template, store UserStore) http.HandlerFunc {
+// TODO(ftambara): Protect against XSS.
+
+func AccountsCreate(tmpl *template.Template, store UserStore, session *scs.SessionManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		// TODO(ftambara): Validate data. If errors are found, render the form again.
 		if false {
@@ -104,15 +109,22 @@ func AccountsCreate(tmpl *template.Template, store UserStore) http.HandlerFunc {
 		}
 		// Move to blog.
 		// I cannot expose the creation of a User, if my intention is for the ID to be generated
-		// by the storage system. In that case, I need one or many factory functions that
+		// by the storage system. In that case, I need one, or many factory functions that
 		// persist the model to the storage system, and returning the domain object.
 		// This begs the question: have a user creation function type and multiple implementers vs
 		// have a concrete function that takes in a store interface and uses it.
-		_, err = store.Create(req.Context(), input.Email, input.Password)
+		user, err := store.Create(req.Context(), input.Email, input.Password)
 		if err != nil {
 			// TODO(ftambara): Fail creation issues or internal server error.
 			panic(err)
 		}
+
+		err = session.RenewToken(req.Context())
+		if err != nil {
+			// TODO(ftambara): Handle this error.
+			panic(err)
+		}
+		session.Put(req.Context(), SessionKeyUserID, user.ID)
 
 		w.Header().Set("Location", "/accounts/verify")
 		w.WriteHeader(http.StatusSeeOther)

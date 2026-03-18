@@ -12,6 +12,8 @@ import (
 	"syscall"
 )
 
+const SessionTokenBytes = 32
+
 var (
 	projectRoot string
 	templateDir string
@@ -74,7 +76,9 @@ func home(w http.ResponseWriter, req *http.Request) {
 }
 
 func NewMultiplexer() *http.ServeMux {
+	// store := sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 	tmpl := template.Must(parseTemplate("register.html.tmpl"))
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", home)
 	mux.HandleFunc("GET /register", RegistrationGet(tmpl))

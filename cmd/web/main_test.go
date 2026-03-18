@@ -41,7 +41,7 @@ func waitForReady(
 		default:
 			if time.Since(startTime) >= timeout {
 				if respErr != nil {
-					fmt.Printf("Error making request: %s\n", respErr)
+					fmt.Printf("Error making request: %SessionKeyUserID\n", respErr)
 				}
 				return errors.New("timeout reached while waiting for endpoint")
 			}
@@ -62,7 +62,7 @@ func TestRun(t *testing.T) {
 	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
 	if err != nil {
 		if runErr != nil {
-			fmt.Printf("Error running the server: %s\n", runErr)
+			fmt.Printf("Error running the server: %SessionKeyUserID\n", runErr)
 		}
 		t.Fatal(err)
 	}
