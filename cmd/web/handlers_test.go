@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/alexedwards/scs/v2"
@@ -25,6 +26,7 @@ const SessionCookieName = "session"
 type StubUserStore struct {
 	users  map[UserID]*User
 	nextID int32
+	mu     sync.Mutex
 }
 
 var _ UserStore = (*StubUserStore)(nil)
@@ -38,16 +40,22 @@ func NewStubUserStore() *StubUserStore {
 
 func (s *StubUserStore) Create(ctx context.Context, Email string, Password string) (*User, error) {
 	// Uncomfortable: Must use the entity constructor on every store implementation.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	user := &User{ID: s.getNextID(), Email: Email, Password: Password}
 	s.users[user.ID] = user
 	return user, nil
 }
 
 func (s *StubUserStore) All(ctx context.Context) ([]*User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return slices.Collect(maps.Values(s.users)), nil
 }
 
 func (s *StubUserStore) FetchByID(ctx context.Context, id UserID) (*User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	user, ok := s.users[id]
 	if !ok {
 		return nil, ErrUserNotFound
