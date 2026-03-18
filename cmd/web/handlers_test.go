@@ -38,11 +38,11 @@ func NewStubUserStore() *StubUserStore {
 	}
 }
 
-func (s *StubUserStore) Create(ctx context.Context, Email string, Password string) (*User, error) {
+func (s *StubUserStore) Create(ctx context.Context, email string, password string) (*User, error) {
 	// Uncomfortable: Must use the entity constructor on every store implementation.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	user := &User{ID: s.getNextID(), Email: Email, Password: Password}
+	user := &User{ID: s.getNextID(), Email: email, Password: password}
 	s.users[user.ID] = user
 	return user, nil
 }

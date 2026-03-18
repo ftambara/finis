@@ -32,7 +32,7 @@ type FormEncoder interface {
 var ErrUserNotFound = errors.New("user not found")
 
 type UserStore interface {
-	Create(ctx context.Context, Email string, Password string) (*User, error)
+	Create(ctx context.Context, email string, password string) (*User, error)
 	All(ctx context.Context) ([]*User, error)
 	FetchByID(ctx context.Context, id UserID) (*User, error)
 }
