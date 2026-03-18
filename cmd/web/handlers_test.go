@@ -304,25 +304,15 @@ func decodeSessionToken(t *testing.T, encoded string) []byte {
 	return decoded
 }
 
-func assertUserIDInSession(t *testing.T, session *scs.SessionManager, token string, expectedID UserID) {
+func assertUserIDInSession(t *testing.T, sm *scs.SessionManager, token string, expectedID UserID) {
 	t.Helper()
 
-	b, found, err := session.Store.Find(token)
+	ctx, err := sm.Load(context.Background(), token)
 	if err != nil {
 		t.Fatalf("error finding session in store: %v", err)
 	}
-	if !found {
-		t.Errorf("session not found in store")
-	}
-	_, values, err := session.Codec.Decode(b)
-	if err != nil {
-		t.Fatalf("error decoding session data: %v", err)
-	}
-	gotUserID, ok := values[SessionKeyUserID]
-	if !ok {
-		t.Fatalf("user ID not associated to session")
-	}
-	if gotUserID != expectedID {
-		t.Errorf("got user ID %d from session, wanted %d", gotUserID, expectedID)
+	got := sm.GetInt32(ctx, SessionKeyUserID)
+	if got != expectedID {
+		t.Errorf("got user ID %d from session, wanted %d", got, expectedID)
 	}
 }
