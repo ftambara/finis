@@ -78,15 +78,15 @@ func TestRegistrationGet(t *testing.T) {
 
 	document := parseHTMLResponse(t, res)
 
-	emailNode := htmlGet(document, "input#user-email")
+	emailNode := htmlGet(t, document, "input#user-email")
 	assertAttrEquals(t, emailNode, "type", "email")
 	assertAttrPresent(t, emailNode, "required")
 
-	passwordNode := htmlGet(document, "input#user-password")
+	passwordNode := htmlGet(t, document, "input#user-password")
 	assertAttrEquals(t, passwordNode, "type", "password")
 	assertAttrPresent(t, passwordNode, "required")
 
-	passwordConfirmationNode := htmlGet(document, "input#user-password-confirmation")
+	passwordConfirmationNode := htmlGet(t, document, "input#user-password-confirmation")
 	assertAttrEquals(t, passwordConfirmationNode, "type", "password")
 	assertAttrPresent(t, passwordConfirmationNode, "required")
 }
@@ -180,7 +180,7 @@ func assertSessionCookie(t *testing.T, res *http.Response) string {
 	if tokenCookie.Name != SessionCookieName {
 		t.Fatalf("wanted token cookie name to be '%s', got '%s'", SessionCookieName, tokenCookie.Name)
 	}
-	sessionTokenBytes := len(decodeSessionToken(tokenCookie.Value))
+	sessionTokenBytes := len(decodeSessionToken(t, tokenCookie.Value))
 	if sessionTokenBytes != SessionTokenBytes {
 		t.Errorf("session token length was %d, want %d", sessionTokenBytes, SessionTokenBytes)
 	}
@@ -210,20 +210,24 @@ func parseHTMLResponse(t *testing.T, res *httptest.ResponseRecorder) *html.Node 
 	return document
 }
 
-func htmlGet(n *html.Node, query string) *html.Node {
-	results := htmlQueryAll(n, query)
+func htmlGet(t *testing.T, n *html.Node, query string) *html.Node {
+	t.Helper()
+
+	results := htmlQueryAll(t, n, query)
 	if len(results) > 1 {
-		panic("too many results")
+		t.Fatalf("too many results for query %q: %d", query, len(results))
 	} else if len(results) == 0 {
-		panic("no results")
+		t.Fatalf("no results for query %q", query)
 	}
 	return results[0]
 }
 
-func htmlQueryAll(n *html.Node, query string) []*html.Node {
+func htmlQueryAll(t *testing.T, n *html.Node, query string) []*html.Node {
+	t.Helper()
+
 	sel, err := cascadia.Parse(query)
 	if err != nil {
-		panic(err)
+		t.Fatalf("error parsing query %q: %v", query, err)
 	}
 	return cascadia.QueryAll(n, sel)
 }
@@ -290,10 +294,12 @@ func assertHTMLWellFormedXML(t *testing.T, buffer io.Reader) {
 	}
 }
 
-func decodeSessionToken(encoded string) []byte {
+func decodeSessionToken(t *testing.T, encoded string) []byte {
+	t.Helper()
+
 	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
-		panic(err)
+		t.Fatalf("error decoding session token: %v", err)
 	}
 	return decoded
 }
