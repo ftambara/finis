@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/xml"
 	"html/template"
-	"io"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -17,8 +14,7 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
-	"github.com/andybalholm/cascadia"
-	"golang.org/x/net/html"
+	"github.com/ftambara/finis/internal/htmltest"
 )
 
 const SessionCookieName = "session"
@@ -76,19 +72,19 @@ func TestRegistrationGet(t *testing.T) {
 	tmpl := template.Must(parseTemplate("register.html.tmpl"))
 	RegistrationGet(tmpl)(res, req)
 
-	document := parseHTMLResponse(t, res)
+	document := htmltest.ParseHTMLResponse(t, res)
 
-	emailNode := htmlGet(t, document, "input#user-email")
-	assertAttrEquals(t, emailNode, "type", "email")
-	assertAttrPresent(t, emailNode, "required")
+	emailNode := htmltest.GetOne(t, document, "input#user-email")
+	htmltest.AssertAttrEquals(t, emailNode, "type", "email")
+	htmltest.AssertAttrPresent(t, emailNode, "required")
 
-	passwordNode := htmlGet(t, document, "input#user-password")
-	assertAttrEquals(t, passwordNode, "type", "password")
-	assertAttrPresent(t, passwordNode, "required")
+	passwordNode := htmltest.GetOne(t, document, "input#user-password")
+	htmltest.AssertAttrEquals(t, passwordNode, "type", "password")
+	htmltest.AssertAttrPresent(t, passwordNode, "required")
 
-	passwordConfirmationNode := htmlGet(t, document, "input#user-password-confirmation")
-	assertAttrEquals(t, passwordConfirmationNode, "type", "password")
-	assertAttrPresent(t, passwordConfirmationNode, "required")
+	passwordConfirmationNode := htmltest.GetOne(t, document, "input#user-password-confirmation")
+	htmltest.AssertAttrEquals(t, passwordConfirmationNode, "type", "password")
+	htmltest.AssertAttrPresent(t, passwordConfirmationNode, "required")
 }
 
 type stubSessionMiddleware struct {
@@ -186,112 +182,6 @@ func assertSessionCookie(t *testing.T, res *http.Response) string {
 	}
 
 	return tokenCookie.Value
-}
-
-func parseHTMLResponse(t *testing.T, res *httptest.ResponseRecorder) *html.Node {
-	if res.Code != http.StatusOK {
-		t.Errorf("got status %v but wanted %v", res.Code, http.StatusOK)
-	}
-	if res.Body.Len() == 0 {
-		t.Fatal("received empty response body")
-	}
-	r := bytes.NewReader(res.Body.Bytes())
-	assertHTMLWellFormed(t, r)
-
-	_, err := r.Seek(0, io.SeekStart)
-	if err != nil {
-		t.Fatalf("error rewinding body reader: %s", err)
-	}
-
-	document, err := html.Parse(r)
-	if err != nil {
-		t.Fatalf("error parssing response body as HTML: %s", err)
-	}
-	return document
-}
-
-func htmlGet(t *testing.T, n *html.Node, query string) *html.Node {
-	t.Helper()
-
-	results := htmlQueryAll(t, n, query)
-	if len(results) > 1 {
-		t.Fatalf("too many results for query %q: %d", query, len(results))
-	} else if len(results) == 0 {
-		t.Fatalf("no results for query %q", query)
-	}
-	return results[0]
-}
-
-func htmlQueryAll(t *testing.T, n *html.Node, query string) []*html.Node {
-	t.Helper()
-
-	sel, err := cascadia.Parse(query)
-	if err != nil {
-		t.Fatalf("error parsing query %q: %v", query, err)
-	}
-	return cascadia.QueryAll(n, sel)
-}
-
-func htmlAttr(n *html.Node, name string) (value string, found bool) {
-	for _, attr := range n.Attr {
-		if attr.Key == name {
-			return attr.Val, true
-		}
-	}
-	return "", false
-}
-
-func assertAttrEquals(t *testing.T, n *html.Node, name string, valWant string) {
-	t.Helper()
-	valGot, found := htmlAttr(n, name)
-	if !found {
-		t.Errorf("attr %s not found", name)
-	}
-	if valGot != valWant {
-		t.Errorf("attr %s value was %s, expected %s", name, valGot, valWant)
-	}
-}
-
-func assertAttrPresent(t *testing.T, n *html.Node, name string) {
-	t.Helper()
-	assertAttrEquals(t, n, name, "")
-}
-
-var assertHTMLWellFormed = assertHTMLWellFormedXML
-
-func assertHTMLWellFormedHTML(t *testing.T, buffer io.Reader) {
-	t.Helper()
-
-	tokenizer := html.NewTokenizer(buffer)
-	for {
-		tokenType := tokenizer.Next()
-		if tokenType == html.ErrorToken {
-			if tokenizer.Err() == io.EOF {
-				return // Done, the HTML is valid.
-			}
-			t.Fatalf("Error parsing HTML: %s", tokenizer.Err())
-		}
-	}
-}
-
-func assertHTMLWellFormedXML(t *testing.T, buffer io.Reader) {
-	t.Helper()
-
-	decoder := xml.NewDecoder(buffer)
-	decoder.Strict = false
-	decoder.AutoClose = xml.HTMLAutoClose
-	decoder.Entity = xml.HTMLEntity
-	for {
-		_, err := decoder.Token()
-		switch err {
-		case io.EOF:
-			return // Done, the HTML is valid.
-		case nil:
-			// Do nothing.
-		default:
-			t.Fatalf("Error parsing HTML: %s", err)
-		}
-	}
 }
 
 func decodeSessionToken(t *testing.T, encoded string) []byte {
