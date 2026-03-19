@@ -94,24 +94,7 @@ func AssertAttrPresent(t *testing.T, n *html.Node, name string) {
 //
 // This is not an authoritative check of the validity of the syntax, but
 // more of a sanity check.
-var AssertHTMLWellFormed = AssertHTMLWellFormedXML
-
-func AssertHTMLWellFormedHTML(t *testing.T, buffer io.Reader) {
-	t.Helper()
-
-	tokenizer := html.NewTokenizer(buffer)
-	for {
-		tokenType := tokenizer.Next()
-		if tokenType == html.ErrorToken {
-			if tokenizer.Err() == io.EOF {
-				return // Done, the HTML is valid.
-			}
-			t.Fatalf("Error parsing HTML: %s", tokenizer.Err())
-		}
-	}
-}
-
-func AssertHTMLWellFormedXML(t *testing.T, buffer io.Reader) {
+func AssertHTMLWellFormed(t *testing.T, buffer io.Reader) {
 	t.Helper()
 
 	decoder := xml.NewDecoder(buffer)
