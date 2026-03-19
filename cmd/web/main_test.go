@@ -62,41 +62,20 @@ func TestRun(t *testing.T) {
 	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
 	if err != nil {
 		if runErr != nil {
-			fmt.Printf("Error running the server: %SessionKeyUserID\n", runErr)
+			fmt.Printf("Error running the server: %s\n", runErr)
 		}
 		t.Fatal(err)
 	}
 	if runErr != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestRegistration(t *testing.T) {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	t.Cleanup(cancel)
-
-	var runErr error
-	go func() {
-		runErr = run(ctx, ":9658")
-	}()
-	err := waitForReady(ctx, 1*time.Second, "http://127.0.0.1:9658/")
-	if err != nil {
-		panic(err)
-	}
-	if runErr != nil {
-		panic(runErr)
-	}
 
 	client := http.Client{}
-	res, err := client.Get("http://127.0.0.1:9658/register")
+	res, err := client.Get("http://127.0.0.1:9658/")
 	if err != nil {
-		t.Fatalf("error getting registration page: %v", err)
+		t.Fatalf("error getting root page: %v", err)
 	}
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("registration page status code is not 200 OK: %v", res.StatusCode)
+		t.Fatalf("root page status code is not 200 OK: %v", res.StatusCode)
 	}
-
-	// Send form
-	// ...
 }

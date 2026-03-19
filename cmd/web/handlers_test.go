@@ -17,8 +17,6 @@ import (
 	"github.com/ftambara/finis/internal/htmltest"
 )
 
-const SessionCookieName = "session"
-
 type StubUserStore struct {
 	users  map[UserID]*User
 	nextID int32
@@ -91,14 +89,53 @@ type stubSessionMiddleware struct {
 	Session *scs.SessionManager
 }
 
-func newStubSessionMiddleware() *stubSessionMiddleware {
+func newInMemorySessionManager() *scs.SessionManager {
 	session := scs.New()
 	session.Store = memstore.New()
-	return &stubSessionMiddleware{Session: session}
+	return session
+}
+
+func newStubSessionMiddleware() *stubSessionMiddleware {
+	return &stubSessionMiddleware{Session: newInMemorySessionManager()}
 }
 
 func (m *stubSessionMiddleware) Then(next http.Handler) http.Handler {
 	return m.Session.LoadAndSave(next)
+}
+
+func TestPostRegisterRoute(t *testing.T) {
+	tmpl := template.Must(parseTemplate("register.html.tmpl"))
+	userStore := NewStubUserStore()
+	userForm := UserCreateForm{Email: "email", Password: "secret", PasswordConfirmation: "secret"}
+	form, err := userForm.EncodeForm()
+	if err != nil {
+		t.Fatalf("failed to marshal user to form: %v", err)
+	}
+
+	server := httptest.NewTLSServer(NewMultiplexer(tmpl, userStore, newInMemorySessionManager()))
+	defer server.Close()
+
+	client := server.Client()
+	disableRedirect(client)
+	res, err := client.Post(server.URL+"/register", "application/x-www-form-urlencoded",
+		strings.NewReader(form.Encode()))
+	if err != nil {
+		t.Fatalf("error making register request: %v", err)
+	}
+	assertEqual(t, res.StatusCode, http.StatusSeeOther)
+}
+
+func disableRedirect(client *http.Client) {
+	client.CheckRedirect = func(r *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+}
+
+func assertEqual[T comparable](t *testing.T, got T, expected T) {
+	t.Helper()
+	if got != expected {
+		t.Errorf("got %v, expected %v", got, expected)
+	}
 }
 
 func TestAccountsCreate(t *testing.T) {
