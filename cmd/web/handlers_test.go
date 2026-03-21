@@ -63,28 +63,6 @@ func (s *StubUserStore) getNextID() UserID {
 	return id
 }
 
-func TestRegistrationGet(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/register", http.NoBody)
-	res := httptest.NewRecorder()
-
-	tmpl := template.Must(parseTemplate("register.html.tmpl"))
-	RegistrationGet(tmpl)(res, req)
-
-	document := htmltest.ParseHTMLResponse(t, res)
-
-	emailNode := htmltest.GetOne(t, document, "input#user-email")
-	htmltest.AssertAttrEquals(t, emailNode, "type", "email")
-	htmltest.AssertAttrPresent(t, emailNode, "required")
-
-	passwordNode := htmltest.GetOne(t, document, "input#user-password")
-	htmltest.AssertAttrEquals(t, passwordNode, "type", "password")
-	htmltest.AssertAttrPresent(t, passwordNode, "required")
-
-	passwordConfirmationNode := htmltest.GetOne(t, document, "input#user-password-confirmation")
-	htmltest.AssertAttrEquals(t, passwordConfirmationNode, "type", "password")
-	htmltest.AssertAttrPresent(t, passwordConfirmationNode, "required")
-}
-
 type stubSessionMiddleware struct {
 	Session *scs.SessionManager
 }
@@ -103,8 +81,30 @@ func (m *stubSessionMiddleware) Then(next http.Handler) http.Handler {
 	return m.Session.LoadAndSave(next)
 }
 
-func TestPostRegisterRoute(t *testing.T) {
-	tmpl := template.Must(parseTemplate("register.html.tmpl"))
+func TestGetCreateAccount(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/create-account", http.NoBody)
+	res := httptest.NewRecorder()
+
+	tmpl := template.Must(parseTemplate("create_account.html.tmpl"))
+	RegistrationGet(tmpl)(res, req)
+
+	document := htmltest.ParseHTMLResponse(t, res)
+
+	emailNode := htmltest.GetOne(t, document, "input#user-email")
+	htmltest.AssertAttrEquals(t, emailNode, "type", "email")
+	htmltest.AssertAttrPresent(t, emailNode, "required")
+
+	passwordNode := htmltest.GetOne(t, document, "input#user-password")
+	htmltest.AssertAttrEquals(t, passwordNode, "type", "password")
+	htmltest.AssertAttrPresent(t, passwordNode, "required")
+
+	passwordConfirmationNode := htmltest.GetOne(t, document, "input#user-password-confirmation")
+	htmltest.AssertAttrEquals(t, passwordConfirmationNode, "type", "password")
+	htmltest.AssertAttrPresent(t, passwordConfirmationNode, "required")
+}
+
+func TestPostCreateAccountRoute(t *testing.T) {
+	tmpl := template.Must(parseTemplate("create_account.html.tmpl"))
 	userStore := NewStubUserStore()
 	userForm := UserCreateForm{Email: "email", Password: "secret", PasswordConfirmation: "secret"}
 	form, err := userForm.EncodeForm()
@@ -117,7 +117,7 @@ func TestPostRegisterRoute(t *testing.T) {
 
 	client := server.Client()
 	disableRedirect(client)
-	res, err := client.Post(server.URL+"/register", "application/x-www-form-urlencoded",
+	res, err := client.Post(server.URL+"/create-account", "application/x-www-form-urlencoded",
 		strings.NewReader(form.Encode()))
 	if err != nil {
 		t.Fatalf("error making register request: %v", err)
@@ -125,20 +125,7 @@ func TestPostRegisterRoute(t *testing.T) {
 	assertEqual(t, res.StatusCode, http.StatusSeeOther)
 }
 
-func disableRedirect(client *http.Client) {
-	client.CheckRedirect = func(r *http.Request, via []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
-}
-
-func assertEqual[T comparable](t *testing.T, got T, expected T) {
-	t.Helper()
-	if got != expected {
-		t.Errorf("got %v, expected %v", got, expected)
-	}
-}
-
-func TestAccountsCreate(t *testing.T) {
+func TestPostCreateAccount(t *testing.T) {
 	// TODO(ftambara): Test password strength.
 	t.Run("can create a valid user", func(t *testing.T) {
 		ctx := context.Background()
@@ -151,12 +138,12 @@ func TestAccountsCreate(t *testing.T) {
 			t.Fatalf("failed to marshal user to form: %v", err)
 		}
 
-		req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+		req := httptest.NewRequest(http.MethodPost, "/create-account", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := httptest.NewRecorder()
 
 		middle := newStubSessionMiddleware()
-		tmpl := template.Must(parseTemplate("register.html.tmpl"))
+		tmpl := template.Must(parseTemplate("create_account.html.tmpl"))
 		middle.Then(AccountsCreate(tmpl, userStore, middle.Session)).ServeHTTP(res, req)
 
 		// Assert the response asks for a redirection.
@@ -197,6 +184,19 @@ func TestAccountsCreate(t *testing.T) {
 
 		assertUserIDInSession(t, middle.Session, token, expectedUserID)
 	})
+}
+
+func disableRedirect(client *http.Client) {
+	client.CheckRedirect = func(r *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+}
+
+func assertEqual[T comparable](t *testing.T, got T, expected T) {
+	t.Helper()
+	if got != expected {
+		t.Errorf("got %v, expected %v", got, expected)
+	}
 }
 
 // assertSessionCookie checks that the session has been set, and it was linked to the right account.

@@ -59,7 +59,7 @@ func run(ctx context.Context, address string) error {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 
-	tmpl := template.Must(parseTemplate("register.html.tmpl"))
+	tmpl := template.Must(parseTemplate("create_account.html.tmpl"))
 	userStore := TodoUserStore{}
 	sessionCookieConfig := scs.SessionCookie{
 		Name:        SessionCookieName,
@@ -110,8 +110,8 @@ func home(w http.ResponseWriter, req *http.Request) {
 func NewMultiplexer(tmpl *template.Template, store UserStore, session *scs.SessionManager) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", home)
-	mux.HandleFunc("GET /register", RegistrationGet(tmpl))
-	mux.Handle("POST /register", session.LoadAndSave(AccountsCreate(tmpl, store, session)))
+	mux.HandleFunc("GET /create-account", RegistrationGet(tmpl))
+	mux.Handle("POST /create-account", session.LoadAndSave(AccountsCreate(tmpl, store, session)))
 	return mux
 }
 
