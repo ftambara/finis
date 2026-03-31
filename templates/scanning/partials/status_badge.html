@@ -1,0 +1,10 @@
+{% set status_class = "px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider" %}
+{% if receipt.status == "COMPLETED" %}
+    <span class="{{ status_class }} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Completed</span>
+{% elif receipt.status == "FAILED" %}
+    <span class="{{ status_class }} bg-rose-500/10 text-rose-400 border border-rose-500/20">Failed</span>
+{% elif receipt.status == "PROCESSING" %}
+    <span class="{{ status_class }} bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse">Processing</span>
+{% else %}
+    <span class="{{ status_class }} bg-gray-500/10 text-gray-400 border border-gray-500/20">Pending</span>
+{% endif %}

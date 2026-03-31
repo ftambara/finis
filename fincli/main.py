@@ -10,6 +10,7 @@ def cli() -> None:
     """Finis CLI - Admin management tool."""
     pass
 
+
 cli.add_command(tiers)
 cli.add_command(organizations)
 cli.add_command(users)

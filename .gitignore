@@ -39,3 +39,6 @@ bin/*.lock
 # No env files except for the example
 .env*
 !.env.example
+
+# Media files
+media/

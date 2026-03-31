@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Log In - Finis{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-white tracking-tight">
+                Log in to Finis
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-400">
+                Welcome back
+            </p>
+        </div>
+        
+        <div class="card p-8 sm:p-10 shadow-xl">
+            <form class="space-y-6" action="{{ url('accounts:login') }}" method="POST">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                
+                {% if form.errors %}
+                <div class="rounded-md bg-red-900/50 p-4 border border-red-500/50">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-300">
+                                Invalid username or password.
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label for="id_username" class="block text-sm font-medium text-gray-300">
+                        Username
+                    </label>
+                    <div class="mt-1">
+                        <input id="id_username" name="username" type="text" autocomplete="username" required
+                            class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm bg-[#0c0c0c] text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white focus:border-white sm:text-sm transition-colors"
+                            placeholder="Enter your username">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="id_password" class="block text-sm font-medium text-gray-300">
+                        Password
+                    </label>
+                    <div class="mt-1">
+                        <input id="id_password" name="password" type="password" autocomplete="current-password" required
+                            class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm bg-[#0c0c0c] text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white focus:border-white sm:text-sm transition-colors"
+                            placeholder="Enter your password">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <!-- We can add 'remember me' later if needed -->
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-gray-400 hover:text-white transition-colors">
+                            Forgot your password?
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit"
+                        class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#161616] focus:ring-white transition-colors">
+                        Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,16 +6,18 @@ from accounts.models import SpendingTier
 
 console = Console()
 
+
 @click.group(name="tiers")
 def tiers() -> None:
     """Manage Spending Tiers."""
     pass
 
+
 @tiers.command(name="list")
 def list_tiers() -> None:
     """List all spending tiers."""
     tiers_qs = SpendingTier.objects.all().order_by("id")
-    
+
     if not tiers_qs.exists():
         console.print("[yellow]No tiers found.[/yellow]")
         return
@@ -31,10 +33,11 @@ def list_tiers() -> None:
             str(tier.id),
             tier.name,
             str(tier.token_limit),
-            tier.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            tier.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     console.print(table)
+
 
 @tiers.command(name="create")
 @click.option("--name", required=True, help="Name of the tier.")
@@ -47,6 +50,7 @@ def create_tier(name: str, token_limit: int) -> None:
 
     tier = SpendingTier.objects.create(name=name, token_limit=token_limit)
     console.print(f"[green]Successfully created tier: {tier.name} (ID: {tier.id})[/green]")
+
 
 @tiers.command(name="update")
 @click.argument("identifier")
@@ -62,9 +66,10 @@ def update_tier(identifier: str, name: str | None, token_limit: int | None) -> N
         tier.name = name
     if token_limit is not None:
         tier.token_limit = token_limit
-    
+
     tier.save()
     console.print(f"[green]Successfully updated tier {identifier}.[/green]")
+
 
 @tiers.command(name="delete")
 @click.argument("identifier")
@@ -83,6 +88,7 @@ def delete_tier(identifier: str, yes: bool) -> None:
         console.print(f"[green]Successfully deleted tier '{identifier}'.[/green]")
     except Exception as e:
         console.print(f"[red]Error deleting tier: {e}[/red]")
+
 
 def _find_tier(identifier: str) -> SpendingTier | None:
     """Helper to find a tier by ID or Name."""

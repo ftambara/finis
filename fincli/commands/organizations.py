@@ -6,16 +6,18 @@ from accounts.models import Organization, SpendingTier
 
 console = Console()
 
+
 @click.group(name="organizations")
 def organizations() -> None:
     """Manage Organizations."""
     pass
 
+
 @organizations.command(name="list")
 def list_orgs() -> None:
     """List all organizations."""
     orgs_qs = Organization.objects.all().select_related("spending_tier").order_by("id")
-    
+
     if not orgs_qs.exists():
         console.print("[yellow]No organizations found.[/yellow]")
         return
@@ -31,10 +33,11 @@ def list_orgs() -> None:
             str(org.id),
             org.name,
             org.spending_tier.name,
-            org.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            org.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     console.print(table)
+
 
 @organizations.command(name="create")
 @click.option("--name", required=True, help="Name of the organization.")
@@ -51,6 +54,7 @@ def create_org(name: str, tier: str) -> None:
 
     org = Organization.objects.create(name=name, spending_tier=tier_obj)
     console.print(f"[green]Successfully created organization: {org.name} (ID: {org.id})[/green]")
+
 
 @organizations.command(name="update")
 @click.argument("identifier")
@@ -74,6 +78,7 @@ def update_org(identifier: str, name: str | None, tier: str | None) -> None:
     org.save()
     console.print(f"[green]Successfully updated organization {identifier}.[/green]")
 
+
 @organizations.command(name="delete")
 @click.argument("identifier")
 @click.option("--yes", is_flag=True, help="Skip confirmation.")
@@ -92,6 +97,7 @@ def delete_org(identifier: str, yes: bool) -> None:
     except Exception as e:
         console.print(f"[red]Error deleting organization: {e}[/red]")
 
+
 def _find_org(identifier: str) -> Organization | None:
     """Helper to find an organization by ID or Name."""
     try:
@@ -101,6 +107,7 @@ def _find_org(identifier: str) -> Organization | None:
     except Organization.DoesNotExist:
         console.print(f"[red]Error: Organization with identifier '{identifier}' not found.[/red]")
         return None
+
 
 def _find_tier(identifier: str) -> SpendingTier | None:
     """Helper to find a tier by ID or Name."""

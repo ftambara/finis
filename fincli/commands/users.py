@@ -6,17 +6,19 @@ from accounts.models import Organization, User
 
 console = Console()
 
+
 @click.group(name="users")
 def users() -> None:
     """Manage Users."""
     pass
+
 
 @users.command(name="list")
 @click.option("--org", help="Filter by organization (ID or Name).")
 def list_users(org: str | None) -> None:
     """List all users."""
     users_qs = User.objects.all().select_related("organization").order_by("id")
-    
+
     if org:
         org_obj = _find_org(org)
         if org_obj:
@@ -41,10 +43,11 @@ def list_users(org: str | None) -> None:
             user.username,
             user.email,
             user.organization.name,
-            user.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     console.print(table)
+
 
 @users.command(name="create")
 @click.option("--username", required=True, help="Username of the user.")
@@ -54,7 +57,7 @@ def list_users(org: str | None) -> None:
     prompt=True,
     hide_input=True,
     confirmation_prompt=True,
-    help="Password of the user."
+    help="Password of the user.",
 )
 @click.option("--org", required=True, help="ID or name of the organization.")
 def create_user(username: str, email: str | None, password: str, org: str) -> None:
@@ -68,12 +71,10 @@ def create_user(username: str, email: str | None, password: str, org: str) -> No
         return
 
     user = User.objects.create_user(
-        username=username,
-        email=email or "",
-        password=password,
-        organization=org_obj
+        username=username, email=email or "", password=password, organization=org_obj
     )
     console.print(f"[green]Successfully created user: {user.username} (ID: {user.id})[/green]")
+
 
 @users.command(name="update")
 @click.argument("identifier")
@@ -82,11 +83,7 @@ def create_user(username: str, email: str | None, password: str, org: str) -> No
 @click.option("--org", help="New organization (ID or Name) for the user.")
 @click.option("--password", help="New password for the user.")
 def update_user(
-    identifier: str,
-    username: str | None,
-    email: str | None,
-    org: str | None,
-    password: str | None
+    identifier: str, username: str | None, email: str | None, org: str | None, password: str | None
 ) -> None:
     """Update a user. IDENTIFIER can be ID or Username."""
     user = _find_user(identifier)
@@ -109,6 +106,7 @@ def update_user(
     user.save()
     console.print(f"[green]Successfully updated user {identifier}.[/green]")
 
+
 @users.command(name="delete")
 @click.argument("identifier")
 @click.option("--yes", is_flag=True, help="Skip confirmation.")
@@ -127,6 +125,7 @@ def delete_user(identifier: str, yes: bool) -> None:
     except Exception as e:
         console.print(f"[red]Error deleting user: {e}[/red]")
 
+
 def _find_user(identifier: str) -> User | None:
     """Helper to find a user by ID or Username."""
     try:
@@ -136,6 +135,7 @@ def _find_user(identifier: str) -> User | None:
     except User.DoesNotExist:
         console.print(f"[red]Error: User with identifier '{identifier}' not found.[/red]")
         return None
+
 
 def _find_org(identifier: str) -> Organization | None:
     """Helper to find an organization by ID or Name."""

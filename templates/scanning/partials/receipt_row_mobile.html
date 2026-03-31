@@ -1,0 +1,28 @@
+<div id="receipt-mobile-{{ receipt.id }}" class="card p-4 flex items-center justify-between active:bg-[#1a1a1a] transition-colors"
+    {% if receipt.status in ["PENDING", "PROCESSING"] %}
+    hx-get="{{ url('scanning:receipt-xhr-status', pk=receipt.id) }}"
+    hx-trigger="every 5s"
+    hx-swap="outerHTML"
+    {% endif %}>
+    <a href="{{ url('scanning:receipt-detail', pk=receipt.id) }}" class="flex items-center space-x-4 flex-grow">
+        <div class="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center border border-gray-800">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        </div>
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="font-bold text-lg">#{{ receipt.id }}</span>
+                {% include "scanning/partials/status_badge.html" %}
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5">
+                {{ receipt.created_at.strftime("%b %d, %H:%M") }} &middot; {{ receipt.images.count() }} images
+            </p>
+        </div>
+    </a>
+    <a href="{{ url('scanning:receipt-detail', pk=receipt.id) }}" class="text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+        </svg>
+    </a>
+</div>

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Receipts | Finis{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-8">
+    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Receipts</h1>
+    <a href="{{ url('scanning:receipt-upload') }}" class="sm:hidden bg-white text-black p-2 rounded-full shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+    </a>
+</div>
+
+<div class="space-y-4">
+    <div class="hidden sm:block card overflow-hidden">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-[#1a1a1a] text-gray-400 text-xs uppercase tracking-wider">
+                    <th class="p-4 font-semibold">Receipt</th>
+                    <th class="p-4 font-semibold">Status</th>
+                    <th class="p-4 font-semibold text-right">Date</th>
+                </tr>
+            </thead>
+            <tbody id="receipt-table-body">
+                {% for receipt in receipts %}
+                    {% include "scanning/partials/receipt_row.html" %}
+                {% else %}
+                    <tr>
+                        <td colspan="3" class="p-12 text-center text-gray-500">No receipts yet.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile List View -->
+    <div class="sm:hidden space-y-3" id="receipt-mobile-list">
+        {% for receipt in receipts %}
+            {% include "scanning/partials/receipt_row_mobile.html" %}
+        {% else %}
+            <div class="text-center py-20 text-gray-500">
+                <p>No receipts scanned yet.</p>
+                <a href="{{ url('scanning:receipt-upload') }}" class="mt-4 inline-block text-white font-semibold">Start Scanning &rarr;</a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

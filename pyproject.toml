@@ -16,6 +16,7 @@ dependencies = [
     "pillow",
     "click>=8.3.1",
     "rich>=14.3.3",
+    "redis>=7.4.0",
 ]
 
 [dependency-groups]
@@ -23,6 +24,8 @@ dev = [
     "mypy",
     "django-stubs",
     "djangorestframework-stubs",
+    "pytest",
+    "pytest-django",
 ]
 
 [tool.pytest.ini_options]

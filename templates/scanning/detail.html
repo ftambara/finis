@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt #{{ receipt.id }} | Finis{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{{ url('scanning:receipt-list') }}" class="text-sm font-medium text-gray-500 hover:text-white transition-colors flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to History
+    </a>
+    
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between mt-6 gap-4">
+        <div>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-3xl font-bold tracking-tight">Receipt #{{ receipt.id }}</h1>
+                {% include "scanning/partials/status_badge.html" %}
+            </div>
+            <p class="text-gray-400 mt-1">{{ receipt.created_at.strftime("%B %d, %Y at %H:%M") }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+    <!-- Results (Primary on mobile) -->
+    <div class="lg:col-span-3 space-y-8 order-1 lg:order-2">
+        <section>
+            <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Extracted Information</h2>
+            <div class="card p-4 sm:p-6 min-h-[200px] flex items-center justify-center">
+                {% if receipt.status == "COMPLETED" and receipt.result %}
+                    <div class="w-full">
+                        <pre class="w-full overflow-x-auto text-[10px] sm:text-xs font-mono bg-black/40 p-4 rounded-lg border border-gray-800 text-emerald-500/90 leading-relaxed">{{ receipt.result.raw_json | tojson(indent=2) }}</pre>
+                    </div>
+                {% elif receipt.status == "FAILED" and receipt.error %}
+                    <div class="text-center py-10">
+                        <div class="w-12 h-12 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="font-bold text-rose-500">Scanning Failed</h3>
+                        <p class="text-sm text-gray-500 mt-2">{{ receipt.error.message }}</p>
+                    </div>
+                {% else %}
+                    <div class="text-center py-20">
+                        <div class="w-12 h-12 bg-gray-800 text-gray-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </div>
+                        <p class="text-gray-400 font-medium">Processing Receipt...</p>
+                        <p class="text-xs text-gray-600 mt-2 italic">We're extracting data using AI. This usually takes 10-20 seconds.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Images (Secondary on mobile) -->
+    <div class="lg:col-span-2 space-y-8 order-2 lg:order-1">
+        <section>
+            <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Source Images</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                {% for image in receipt.images.all() %}
+                    <div class="card overflow-hidden group">
+                        <img src="{{ image.image.url }}" alt="Receipt page {{ image.sequence }}" class="w-full h-auto opacity-80 group-hover:opacity-100 transition-opacity">
+                        <div class="p-3 bg-[#1a1a1a] text-[10px] text-gray-500 flex justify-between">
+                            <span>PAGE {{ image.sequence + 1 }}</span>
+                            <span>SOURCE IMAGE</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

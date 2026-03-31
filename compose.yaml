@@ -11,5 +11,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql:rw
 
+  redis:
+    image: redis:8.6-trixie
+    restart: always
+    ports:
+      - "6379:6379"
+
 volumes:
   postgres_data:
