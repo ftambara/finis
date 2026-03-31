@@ -1,0 +1,41 @@
+# Caches
+.mypy_cache
+__pycache__/
+.cache
+
+# Virtual environments
+.venv
+
+# Local IDE configs
+.idea/
+.vscode/
+.zed/
+.cursor/
+
+# Flox.dev lockfile (will differ slightly per local dev env, even with consistent pinning in TOML file)
+.flox/env/manifest.lock
+
+# Claude Code settings
+.claude/settings.local.json
+.claude/worktrees/
+
+# Claude Code review outputs
+CODE_DEBUGGING_SESSION.md
+CODE_REVIEW.md
+QAREPORT.md
+
+# Ignore Agent OS (Claude Code) files
+.claude/agents/agent-os
+.claude/commands/agent-os
+
+agent-os/
+
+# Ignore local mprocs configs
+bin/mprocs*.local.yaml
+
+# Ignore bin lockfiles
+bin/*.lock
+
+# No env files except for the example
+.env*
+!.env.example
