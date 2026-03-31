@@ -16,6 +16,7 @@
 - comments: explain why, not what. Use proper punctuation.
 - python/tests: use table-driven test style.
 - reduce nesting by using early returns, guard clauses, helper methods and similar techniques.
+- Never ignore checks without an explanation.
 - spelling: American English.
 - sql: always review django migrations; the use of database-level constraints is encouraged.
 - sql: Use auto_now is discouraged. Prefer DB triggers like SQL-alchemy does.

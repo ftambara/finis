@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+import os
+import sys
+from pathlib import Path
+
+# Add the project root to sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+# Setup Django before importing any models.
+# E402 is ignored because django.setup() must be called before
+# importing any app-specific models or components that depend on Django settings.
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finis.settings")
+import django  # noqa: E402
+
+django.setup()
+
+from fincli.main import cli  # noqa: E402
+
+if __name__ == "__main__":
+    cli()
