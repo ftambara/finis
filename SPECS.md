@@ -22,22 +22,21 @@ The CLI is useful for managing the server. The CLI command is named `fincli` and
 - HTMX (preferred)
 - Vanilla Javascript (when necessary)
 - Tailwind CSS
-- uv
-- ty
-- ruff
-- Hetzner for hosting
-- Packer (if needed) and terraform for deploying. It is not a problem to use a budget, managed solution.
-
-Use a low-overhead structured logging solution.
+- **`structlog`** for structured logging
+- **`environs`** for environment variable management and validation
 
 ## Features
+
+### Database Design Philosophy
+
+- **No-Null Schema:** We prioritize database integrity. Nullable and blank fields are almost never allowed. Optional data MUST be handled via related models (e.g., `OneToOneField`) or dedicated link tables.
 
 ### Accounts
 
 - Accounts are created on an invitation-basis. We extend invitation links to selected few.
 - The administrator can create new accounts using `fincli`.
 - Accounts have spending monthly limits according to their tier.
-- Spending tiers can be created via CLI. They allow for a maximum monthly spending limit.
+- Spending tiers can be created via CLI. They allow for a maximum monthly token limit.
 - Unused spending budget is lost.
 - Spending is based on token usage. All interactions with LLMs on behalf of user commands MUST be assigned to that user's organization.
 - Organizations group user accounts so they can all, in the future, pay a single bill. They can be created via CLI.
@@ -72,6 +71,7 @@ Use a low-overhead structured logging solution.
 ### Scanning
 
 - Users can send pictures of supermarket receipts (or any other type of establishment – we'll keep the models flexible but start by understanding just some formats)
+- Receipts can span multiple images.
 - Receipts are scanned using Grok Fast API into JSON. We will provide the LLM API with the desired output fields.
 - Receipt JSONs are scanned for transaction detail information. Namely:
     - Order information: total price, total discounts, payment method, seller name, seller address, seller-specific order id (formatted as key=value strings separated by spaces and sorted alphabetically), 

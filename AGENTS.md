@@ -3,7 +3,7 @@
 ## Code Style
 
 ### Auto
-- Use `ty` in strictest mode
+- Use `mypy` in strict mode with `django-stubs`.
 - Corollary: Every function signature must use fully-parameterized types.
 - Use ruff format.
 - Use ruff check with the selected rules.
@@ -11,6 +11,7 @@
 
 ### Judgment-based
 - ui/css: Use tailwind utility classes instead of inline styles
+- config: Never access environment variables outside of `settings.py`. Use `from django.conf import settings`.
 - errors: Prefer explicit error handling with typed errors
 - comments: explain why, not what. Use proper punctuation.
 - python/tests: use table-driven test style.
@@ -18,7 +19,7 @@
 - spelling: American English.
 - sql: always review django migrations; the use of database-level constraints is encouraged.
 - sql: Use auto_now is discouraged. Prefer DB triggers like SQL-alchemy does.
-- sql: Nullable fields are almost never the right call.
+- sql: Nullable and blank fields are almost never the right call. If something might be missing initially, use a related model (e.g., `OneToOneField`) to avoid the nullable field.
 
 ## Commit style
 
