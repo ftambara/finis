@@ -67,3 +67,32 @@ jobs:
           REDIS_URL: "redis://localhost:6379/1"
           GROK_API_KEY: "dummy-key"
         run: uv run pytest
+
+  infra_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v3
+
+      - name: Packer Init
+        run: packer init packer/finis.pkr.hcl
+
+      - name: Packer Format Check
+        run: packer fmt -check packer/
+
+      - name: Packer Validate
+        run: packer validate -var hcloud_token=dummy packer/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform -chdir=terraform fmt -check
+
+      - name: Terraform Init & Validate
+        run: |
+          terraform -chdir=terraform init -backend=false
+          terraform -chdir=terraform validate
