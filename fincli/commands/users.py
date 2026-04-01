@@ -32,7 +32,6 @@ def list_users(org: str | None) -> None:
 
     table = Table(title="Users")
     table.add_column("ID", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Username", style="magenta")
     table.add_column("Email", style="green")
     table.add_column("Organization", style="blue")
     table.add_column("Created At", style="blue")
@@ -40,7 +39,6 @@ def list_users(org: str | None) -> None:
     for user in users_qs:
         table.add_row(
             str(user.id),
-            user.username,
             user.email,
             user.organization.name,
             user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -50,8 +48,7 @@ def list_users(org: str | None) -> None:
 
 
 @users.command(name="create")
-@click.option("--username", required=True, help="Username of the user.")
-@click.option("--email", help="Email of the user.")
+@click.option("--email", required=True, help="Email of the user.")
 @click.option(
     "--password",
     prompt=True,
@@ -60,38 +57,31 @@ def list_users(org: str | None) -> None:
     help="Password of the user.",
 )
 @click.option("--org", required=True, help="ID or name of the organization.")
-def create_user(username: str, email: str | None, password: str, org: str) -> None:
+def create_user(email: str, password: str, org: str) -> None:
     """Create a new user."""
-    if User.objects.filter(username=username).exists():
-        console.print(f"[red]Error: User with username '{username}' already exists.[/red]")
+    if User.objects.filter(email=email).exists():
+        console.print(f"[red]Error: User with email '{email}' already exists.[/red]")
         return
 
     org_obj = _find_org(org)
     if not org_obj:
         return
 
-    user = User.objects.create_user(
-        username=username, email=email or "", password=password, organization=org_obj
-    )
-    console.print(f"[green]Successfully created user: {user.username} (ID: {user.id})[/green]")
+    user = User.objects.create_user(email=email, password=password, organization=org_obj)
+    console.print(f"[green]Successfully created user: {user.email} (ID: {user.id})[/green]")
 
 
 @users.command(name="update")
 @click.argument("identifier")
-@click.option("--username", help="New username for the user.")
 @click.option("--email", help="New email for the user.")
 @click.option("--org", help="New organization (ID or Name) for the user.")
 @click.option("--password", help="New password for the user.")
-def update_user(
-    identifier: str, username: str | None, email: str | None, org: str | None, password: str | None
-) -> None:
-    """Update a user. IDENTIFIER can be ID or Username."""
+def update_user(identifier: str, email: str | None, org: str | None, password: str | None) -> None:
+    """Update a user. IDENTIFIER can be ID or Email."""
     user = _find_user(identifier)
     if not user:
         return
 
-    if username:
-        user.username = username
     if email:
         user.email = email
     if org:
@@ -111,12 +101,12 @@ def update_user(
 @click.argument("identifier")
 @click.option("--yes", is_flag=True, help="Skip confirmation.")
 def delete_user(identifier: str, yes: bool) -> None:
-    """Delete a user. IDENTIFIER can be ID or Username."""
+    """Delete a user. IDENTIFIER can be ID or Email."""
     user = _find_user(identifier)
     if not user:
         return
 
-    if not yes and not click.confirm(f"Are you sure you want to delete user '{user.username}'?"):
+    if not yes and not click.confirm(f"Are you sure you want to delete user '{user.email}'?"):
         return
 
     try:
@@ -127,11 +117,11 @@ def delete_user(identifier: str, yes: bool) -> None:
 
 
 def _find_user(identifier: str) -> User | None:
-    """Helper to find a user by ID or Username."""
+    """Helper to find a user by ID or Email."""
     try:
         if identifier.isdigit():
             return User.objects.get(id=int(identifier))
-        return User.objects.get(username=identifier)
+        return User.objects.get(email=identifier)
     except User.DoesNotExist:
         console.print(f"[red]Error: User with identifier '{identifier}' not found.[/red]")
         return None

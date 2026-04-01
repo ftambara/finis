@@ -10,7 +10,7 @@ class AuthenticationTests(TestCase):
         self.tier = SpendingTier.objects.create(name="Free", token_limit=1000)
         self.org = Organization.objects.create(name="Test Org", spending_tier=self.tier)
         self.user = User.objects.create_user(
-            username="testuser",
+            email="test@example.com",
             password="testpassword123",
             organization=self.org,
         )
@@ -25,7 +25,7 @@ class AuthenticationTests(TestCase):
         # Check that we can login successfully
         response = self.client.post(
             reverse("accounts:login"),
-            {"username": "testuser", "password": "testpassword123"},
+            {"username": "test@example.com", "password": "testpassword123"},
         )
         # Login should redirect
         self.assertEqual(response.status_code, 302)
@@ -51,14 +51,14 @@ class AuthenticationTests(TestCase):
     def test_failed_login(self) -> None:
         response = self.client.post(
             reverse("accounts:login"),
-            {"username": "testuser", "password": "wrongpassword"},
+            {"username": "test@example.com", "password": "wrongpassword"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Invalid username or password.")
+        self.assertContains(response, "Invalid email or password.")
         self.assertFalse(self.client.session.get("_auth_user_id"))
 
     def test_logout(self) -> None:
-        self.client.login(username="testuser", password="testpassword123")
+        self.client.login(username="test@example.com", password="testpassword123")
         self.assertTrue(self.client.session.get("_auth_user_id"))
 
         response = self.client.post(reverse("accounts:logout"))

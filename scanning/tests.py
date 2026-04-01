@@ -23,14 +23,14 @@ def other_organization(db: object) -> Organization:
 @pytest.fixture
 def user(organization: Organization) -> User:
     return User.objects.create_user(
-        username="testuser", password="password", organization=organization
+        email="test@example.com", password="password", organization=organization
     )
 
 
 @pytest.fixture
 def other_user(other_organization: Organization) -> User:
     return User.objects.create_user(
-        username="otheruser", password="password", organization=other_organization
+        email="other@example.com", password="password", organization=other_organization
     )
 
 
@@ -52,7 +52,7 @@ class TestScanningViews:
             organization=other_organization, user=other_user, status=Receipt.Status.PENDING
         )
 
-        client.login(username="testuser", password="password")
+        client.login(username="test@example.com", password="password")
         response = client.get(reverse("scanning:receipt-list"))
 
         assert response.status_code == 200
@@ -62,7 +62,7 @@ class TestScanningViews:
         assert f">#{r2.id}</span>" not in content
 
     def test_receipt_upload(self, client: Client, user: User, organization: Organization) -> None:
-        client.login(username="testuser", password="password")
+        client.login(username="test@example.com", password="password")
         image = SimpleUploadedFile("receipt.jpg", b"file_content", content_type="image/jpeg")
 
         # Use MultiValueDict for multiple files in test client
@@ -87,7 +87,7 @@ class TestScanningViews:
             organization=other_organization, user=other_user, status=Receipt.Status.PENDING
         )
 
-        client.login(username="testuser", password="password")
+        client.login(username="test@example.com", password="password")
         response = client.get(reverse("scanning:receipt-detail", kwargs={"pk": receipt.pk}))
 
         assert response.status_code == 404
@@ -99,7 +99,7 @@ class TestScanningViews:
             organization=organization, user=user, status=Receipt.Status.PROCESSING
         )
 
-        client.login(username="testuser", password="password")
+        client.login(username="test@example.com", password="password")
         response = client.get(
             reverse("scanning:receipt-xhr-status", kwargs={"pk": receipt.pk}),
             HTTP_HX_REQUEST="true",
@@ -116,7 +116,7 @@ class TestScanningViews:
             organization=organization, user=user, status=Receipt.Status.PROCESSING
         )
 
-        client.login(username="testuser", password="password")
+        client.login(username="test@example.com", password="password")
         user_agent = (
             "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) "
             "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1"
