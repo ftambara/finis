@@ -11,6 +11,7 @@ from django.views.generic import CreateView, DetailView, ListView, View
 
 from .forms import ReceiptUploadForm
 from .models import Receipt, ReceiptImage
+from .tasks import process_receipt_task
 
 
 class OrganizationFilteredMixin:
@@ -56,6 +57,9 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
 
             for i, f in enumerate(files):
                 ReceiptImage.objects.create(receipt=self.object, image=f, sequence=i)
+
+        receipt_id = self.object.id
+        transaction.on_commit(lambda: process_receipt_task.delay(receipt_id))
 
         return HttpResponseRedirect(self.get_success_url())
 

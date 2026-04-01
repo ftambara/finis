@@ -17,6 +17,7 @@ dependencies = [
     "click>=8.3.1",
     "rich>=14.3.3",
     "redis>=7.4.0",
+    "celery>=5.6.3",
 ]
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
     "djangorestframework-stubs",
     "pytest",
     "pytest-django",
+    "celery-types>=0.26.0",
 ]
 
 [tool.pytest.ini_options]

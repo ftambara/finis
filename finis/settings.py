@@ -107,6 +107,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 
+GROK_API_KEY = env.str("GROK_API_KEY")
+GROK_API_URL = env.str("GROK_API_URL", default="https://api.x.ai/v1/chat/completions")
+GROK_MODEL = env.str("GROK_MODEL", default="grok-4-1-fast-non-reasoning")
+
+# Celery configuration
+CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://localhost:6379/1")
+CELERY_RESULT_BACKEND = env.str("REDIS_URL", default="redis://localhost:6379/1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
