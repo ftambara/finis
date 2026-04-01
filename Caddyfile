@@ -1,0 +1,35 @@
+{
+    servers {
+        protocols tls1.3
+    }
+}
+
+{$SITE_DOMAIN:localhost} {
+    # TLS is automatically managed by Caddy. For local development it uses its own CA.
+
+    # Route static and media files
+    handle_path /static/* {
+        root * /var/www/static
+        file_server
+    }
+    handle_path /media/* {
+        root * /var/www/media
+        file_server
+    }
+
+    # Reverse proxy to Django application
+    handle {
+        reverse_proxy host.docker.internal:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Logging
+    log {
+        output stdout
+        format json
+    }
+}

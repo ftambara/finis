@@ -12,8 +12,9 @@ env.read_env()
 DEFAULT_SECRET_KEY = "django-insecure-k_@40wpb#=*-hdd_mi9k9y(5=$u4d&#v3x%he4nwedyb!=34kf"
 SECRET_KEY = env.str("SECRET_KEY", default=DEFAULT_SECRET_KEY)
 DEBUG = env.bool("DEBUG", default=False)
+LOCAL_HTTPS = env.bool("LOCAL_HTTPS", default=True)
 
-ALLOWED_HOSTS: list[str] = env.list("ALLOWED_HOSTS", default=[])
+ALLOWED_HOSTS: list[str] = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -80,7 +81,7 @@ CACHES = {
 }
 
 SESSION_ENGINE = "accounts.session_backend"
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=LOCAL_HTTPS)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
@@ -101,8 +102,14 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "static"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if LOCAL_HTTPS else None
+USE_X_FORWARDED_HOST = LOCAL_HTTPS
+USE_X_FORWARDED_PORT = LOCAL_HTTPS
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
