@@ -36,9 +36,13 @@ ssh "root@$IP" << 'EOF'
   gunzip -c finis_$IMAGE_TAG.tar.gz | docker load
   
   echo "Starting services with docker compose..."
-  docker compose -f compose.prod.yaml up -d
+  docker compose -f compose.prod.yaml up -d --remove-orphans
   
-  echo "Cleaning up..."
+  echo "Reloading Caddy configuration..."
+  docker compose -f compose.prod.yaml exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+
+  echo "Cleaning up old images..."
+  docker image prune -f
   rm finis_$IMAGE_TAG.tar.gz
   
   echo "Deployment successful!"
