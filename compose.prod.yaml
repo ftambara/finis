@@ -16,7 +16,7 @@ services:
       - redis_data:/data
 
   app:
-    build: .
+    image: finis:${IMAGE_TAG:-latest}
     restart: always
     environment:
       DEBUG: "False"
@@ -34,7 +34,7 @@ services:
       - media_volume:/app/media
 
   worker:
-    build: .
+    image: finis:${IMAGE_TAG:-latest}
     restart: always
     command: celery -A finis worker -l info
     environment:
