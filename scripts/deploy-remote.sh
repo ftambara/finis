@@ -12,20 +12,20 @@ if [ -z "$IP" ] || [ -z "$IMAGE_TAG" ]; then
 fi
 
 echo "Connecting to $IP to ensure deployment directory exists..."
-ssh root@$IP "mkdir -p /app/finis"
+ssh "root@$IP" "mkdir -p /app/finis"
 
 echo "Creating production .env file on server..."
 # Pass individual env vars or the whole file content
-ssh root@$IP "cat << 'EOF' > /app/finis/.env
+ssh "root@$IP" "cat << 'EOF' > /app/finis/.env
 $PRODUCTION_ENV
 IMAGE_TAG=$IMAGE_TAG
 EOF"
 
 echo "Copying image and config files to server..."
-scp finis_$IMAGE_TAG.tar.gz compose.prod.yaml Caddyfile root@$IP:/app/finis/
+scp "finis_$IMAGE_TAG.tar.gz" compose.prod.yaml Caddyfile "root@$IP:/app/finis/"
 
 echo "Loading image and restarting services on server..."
-ssh root@$IP << 'EOF'
+ssh "root@$IP" << 'EOF'
   set -e
   cd /app/finis
   

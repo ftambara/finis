@@ -10,9 +10,9 @@ if [ -z "$IMAGE_TAG" ]; then
 fi
 
 echo "Building Docker image with tag finis:$IMAGE_TAG..."
-docker build -t finis:$IMAGE_TAG .
+docker build -t "finis:$IMAGE_TAG" .
 
 echo "Saving image to tarball..."
-docker save finis:$IMAGE_TAG | gzip > finis_$IMAGE_TAG.tar.gz
+docker save "finis:$IMAGE_TAG" | gzip > "finis_$IMAGE_TAG.tar.gz"
 
 echo "Image build and save complete: finis_$IMAGE_TAG.tar.gz"
