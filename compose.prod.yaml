@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DATABASE_USER:-finis}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data:rw
+      - postgres_data:/var/lib/postgresql:rw
 
   redis:
     image: redis:8.6-trixie
