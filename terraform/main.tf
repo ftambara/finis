@@ -92,7 +92,7 @@ resource "cloudflare_dns_record" "finis_dns" {
   name    = "finis"
   content = hcloud_server.finis_app.ipv4_address
   proxied = true
-  ttl = 1 // Automatic
+  ttl     = 1 // Automatic
 }
 
 output "server_ipv4" {
