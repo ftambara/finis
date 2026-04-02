@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [master]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hcloud CLI
+        run: |
+          curl -fsSL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
+          sudo mv hcloud /usr/local/bin/
+
+      - name: Get Server IP
+        id: get_ip
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          IP=$(hcloud server list --label project=finis -o noheader -o 'custom-columns=ipv4')
+          if [ -z "$IP" ]; then
+            echo "Error: No server found with label project=finis"
+            exit 1
+          fi
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ steps.get_ip.outputs.ip }}
+        run: ./scripts/setup-ssh.sh
+
+      - name: Build Image
+        run: ./scripts/build-image.sh
+
+      - name: Remote Deploy
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+          SERVER_IP: ${{ steps.get_ip.outputs.ip }}
+        run: ./scripts/deploy-remote.sh "$SERVER_IP"
