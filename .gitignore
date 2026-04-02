@@ -42,3 +42,9 @@ bin/*.lock
 
 # Media files
 media/
+
+# Terraform provider/module cache
+**/.terraform/
+
+# Terraform lock file
+.terraform.lock.hcl

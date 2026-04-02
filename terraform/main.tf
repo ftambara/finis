@@ -4,11 +4,19 @@ terraform {
       source  = "hetznercloud/hcloud"
       version = "~> 1.45"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
 
 provider "hcloud" {
   token = var.hcloud_token
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }
 
 data "hcloud_image" "latest_finis" {
@@ -19,6 +27,11 @@ data "hcloud_image" "latest_finis" {
 resource "hcloud_ssh_key" "default" {
   name       = "${var.project_name}-ssh-key"
   public_key = var.ssh_public_key
+}
+
+resource "hcloud_ssh_key" "ci" {
+  name       = "${var.project_name}-ci-ssh-key"
+  public_key = var.ci_ssh_public_key
 }
 
 resource "hcloud_firewall" "finis_fw" {
@@ -60,7 +73,7 @@ resource "hcloud_server" "finis_app" {
   image        = data.hcloud_image.latest_finis.id
   server_type  = var.server_type
   location     = var.location
-  ssh_keys     = [hcloud_ssh_key.default.id]
+  ssh_keys     = [hcloud_ssh_key.default.id, hcloud_ssh_key.ci.id]
   firewall_ids = [hcloud_firewall.finis_fw.id]
 
   public_net {
@@ -71,6 +84,15 @@ resource "hcloud_server" "finis_app" {
   labels = {
     project = var.project_name
   }
+}
+
+resource "cloudflare_dns_record" "finis_dns" {
+  zone_id = var.cloudflare_zone_id
+  type    = "A"
+  name    = "finis"
+  content = hcloud_server.finis_app.ipv4_address
+  proxied = true
+  ttl = 1 // Automatic
 }
 
 output "server_ipv4" {
