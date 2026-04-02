@@ -1,35 +1,35 @@
-{
-    servers {
-        protocols tls1.3
-    }
-}
+# https://ssl-config.mozilla.org/#server=caddy&version=2.11&config=modern&guideline=5.7
 
 {$SITE_DOMAIN:localhost} {
-    # TLS is automatically managed by Caddy. For local development it uses its own CA.
+  # Enforce TLS 1.3 only
+  tls {
+    protocols tls1.3
+  }
 
-    # Route static and media files
-    handle_path /static/* {
-        root * /var/www/static
-        file_server
-    }
-    handle_path /media/* {
-        root * /var/www/media
-        file_server
-    }
+  # HSTS (63072000 seconds)
+  header Strict-Transport-Security "max-age=63072000"
 
-    # Reverse proxy to Django application
-    handle {
-        reverse_proxy {$UPSTREAM_ADDR:app:8000} {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
+  # Route static and media files
+  handle_path /static/* {
+    root * /var/www/static
+    file_server
+  }
+  handle_path /media/* {
+    root * /var/www/media
+    file_server
+  }
 
-    # Logging
-    log {
-        output stdout
-        format json
+  # Reverse proxy to Django application
+  handle {
+    reverse_proxy {$UPSTREAM_ADDR:app:8000} {
+      header_up X-Real-IP {remote_host}
     }
+  }
+
+  # Logging
+  log {
+    output stdout
+    format json
+  }
 }
+

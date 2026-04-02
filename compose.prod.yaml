@@ -55,6 +55,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
       UPSTREAM_ADDR: app:8000
