@@ -38,6 +38,9 @@ class ReceiptProcessingService:
         """
         Process a receipt by sending its images to the LLM and parsing the result.
         """
+        log = logger.bind(receipt_id=receipt.id, user_id=receipt.user.id)
+        log.info("receipt_processing_started", image_count=receipt.images.count())
+
         receipt.status = Receipt.Status.PROCESSING
         receipt.save()
 
@@ -46,14 +49,16 @@ class ReceiptProcessingService:
             self._save_result(receipt, raw_result)
             receipt.status = Receipt.Status.COMPLETED
             receipt.save()
+            log.info("receipt_processing_completed")
         except Exception as e:
-            logger.exception("receipt_processing_failed", receipt_id=receipt.id, error=str(e))
+            log.exception("receipt_processing_failed", error=str(e))
             ReceiptError.objects.update_or_create(receipt=receipt, defaults={"message": str(e)})
             receipt.status = Receipt.Status.FAILED
             receipt.save()
 
     def _call_llm(self, receipt: Receipt) -> dict[str, Any]:
         """Send receipt images to LLM and return raw JSON response."""
+        log = logger.bind(receipt_id=receipt.id)
         prompt = (
             "Extract transaction details from this receipt. You may be provided with one or "
             "multiple images of the same receipt. If multiple images are provided, they may "
@@ -100,16 +105,20 @@ class ReceiptProcessingService:
             self.api_url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
         )
 
+        log.info("llm_request_sent", model=self.model)
         try:
             with self.requester(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
         except urllib.error.URLError as e:
             raise Exception(f"API call failed: {e}") from e
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse LLM API response: {e}") from e
 
         # Record token usage
         usage = result.get("usage", {})
         total_tokens = usage.get("total_tokens", 0)
         if total_tokens > 0:
+            log.info("llm_token_usage", total_tokens=total_tokens)
             TokenUsage.objects.create(
                 organization=receipt.organization,
                 user=receipt.user,
@@ -122,11 +131,16 @@ class ReceiptProcessingService:
             raise Exception("No choices returned from LLM")
 
         message_content = choices[0].get("message", {}).get("content", "")
-        return cast(dict[str, Any], json.loads(message_content))
+        try:
+            return cast(dict[str, Any], json.loads(message_content))
+        except json.JSONDecodeError as e:
+            log.error("llm_invalid_json_content", content=message_content)
+            raise Exception(f"LLM returned invalid JSON content: {e}") from e
 
     @transaction.atomic
     def _save_result(self, receipt: Receipt, data: dict[str, Any]) -> None:
         """Save the parsed LLM result into the database models."""
+        log = logger.bind(receipt_id=receipt.id)
         ReceiptResult.objects.update_or_create(receipt=receipt, defaults={"raw_json": data})
 
         order_data = data.get("order", {})
@@ -169,3 +183,10 @@ class ReceiptProcessingService:
                     amount=discount_data.get("amount") or 0,
                     description=discount_data.get("description") or "Discount",
                 )
+
+        log.info(
+            "receipt_data_saved",
+            seller=seller_name,
+            total=processed_receipt.total_price,
+            line_items=len(line_items_data),
+        )

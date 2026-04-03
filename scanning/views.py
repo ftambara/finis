@@ -1,5 +1,6 @@
 from typing import Any
 
+import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
@@ -12,6 +13,8 @@ from django.views.generic import CreateView, DetailView, ListView, View
 from .forms import MAX_TOTAL_SIZE, MAX_UPLOAD_SIZE, ReceiptUploadForm
 from .models import Receipt, ReceiptImage
 from .tasks import process_receipt_task
+
+logger = structlog.get_logger(__name__)
 
 
 class OrganizationFilteredMixin:
@@ -49,13 +52,14 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
 
     def form_valid(self, form: ReceiptUploadForm) -> HttpResponse:
         files = self.request.FILES.getlist("images")
+        user = self.request.user
+        if isinstance(user, AnonymousUser):
+            raise ValueError("User must be authenticated")
+
+        log = logger.bind(user_id=user.id, image_count=len(files))
 
         with transaction.atomic():
             self.object = form.save(commit=False)
-
-            user = self.request.user
-            if isinstance(user, AnonymousUser):
-                raise ValueError("User must be authenticated")
 
             self.object.user = user
             self.object.organization = user.organization
@@ -65,6 +69,7 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
                 ReceiptImage.objects.create(receipt=self.object, image=f, sequence=i)
 
         receipt_id = self.object.id
+        log.info("receipt_upload_success", receipt_id=receipt_id)
         transaction.on_commit(lambda: process_receipt_task.delay(receipt_id))
 
         return HttpResponseRedirect(self.get_success_url())
@@ -83,6 +88,7 @@ class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin, View):
         receipt = get_object_or_404(self.get_queryset(), pk=pk)
 
         if request.headers.get("HX-Request"):
+            logger.info("receipt_status_poll", receipt_id=receipt.id, status=receipt.status)
             # Simple check for mobile to return the correct partial
             user_agent = request.headers.get("User-Agent", "").lower()
             is_mobile = any(ua in user_agent for ua in ["mobile", "android", "iphone"])
