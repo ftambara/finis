@@ -12,6 +12,8 @@ django_stubs_ext.monkeypatch()
 
 # Maximum file size: 10MB
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+# Maximum total upload size: 50MB
+MAX_TOTAL_SIZE = 50 * 1024 * 1024
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -54,7 +56,14 @@ class ReceiptUploadForm(forms.ModelForm[Receipt]):
 
     def clean_images(self) -> list[UploadedFile]:
         files: list[UploadedFile] = self.files.getlist("images")
+        total_size = 0
         for f in files:
-            if f.size is not None and f.size > MAX_UPLOAD_SIZE:
-                raise ValidationError(f"File {f.name} is too large. Max size is 10MB.")
+            if f.size is not None:
+                if f.size > MAX_UPLOAD_SIZE:
+                    raise ValidationError(f"File {f.name} is too large. Max size is 10MB.")
+                total_size += f.size
+
+        if total_size > MAX_TOTAL_SIZE:
+            raise ValidationError("Total upload size exceeds 50MB.")
+
         return files

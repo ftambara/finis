@@ -3,66 +3,279 @@
 {% block title %}Scan Receipt | Finis{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
-    <div class="mb-10 text-center sm:text-left">
-        <h1 class="text-4xl font-extrabold tracking-tight mb-2">Scan Receipt</h1>
-        <p class="text-gray-500">Snap a photo or upload files to track your expenses.</p>
-    </div>
+    <div class="max-w-xl mx-auto">
+        <div class="mb-10 text-center sm:text-left">
+            <h1 class="text-4xl font-extrabold tracking-tight mb-2">Scan Receipt</h1>
+            <p class="text-gray-500">Snap a photo or upload files to track your expenses.</p>
+        </div>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-6"
-          hx-post="{{ url('scanning:receipt-upload') }}"
-          hx-target="body"
-          hx-indicator="#loading-indicator">
-        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-        
-        <div class="card p-1 sm:p-2 border-dashed border-2 border-gray-800 bg-transparent">
-            <label for="{{ form.images.id_for_label }}" class="flex flex-col items-center justify-center py-12 px-4 cursor-pointer hover:bg-white/5 transition-colors rounded-lg group">
-                <div class="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+        <form method="post" enctype="multipart/form-data" class="space-y-6"
+              hx-post="{{ url('scanning:receipt-upload') }}"
+              hx-target="body"
+              hx-indicator="#loading-indicator">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="card p-1 sm:p-2 border-dashed border-2 border-gray-800 bg-transparent h-full">
+                    <div onclick="openCamera()"
+                         class="flex flex-col items-center justify-center py-8 px-2 cursor-pointer hover:bg-white/5 transition-colors rounded-lg group text-center h-full">
+                        <div class="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-sm font-bold">Camera</span>
+                        <span class="text-xs text-gray-500 mt-1">Take photo</span>
+                    </div>
                 </div>
-                <span class="text-lg font-bold">Take Photo</span>
-                <span class="text-sm text-gray-500 mt-1">or select from gallery</span>
-                <input type="file" name="images" id="{{ form.images.id_for_label }}" multiple capture="camera" class="hidden" required onchange="updateFileList(this)">
-            </label>
-        </div>
 
-        <div id="file-list" class="hidden card p-4 space-y-2">
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Selected Files</h3>
-            <div id="file-names" class="text-sm space-y-1"></div>
-        </div>
+                <div class="card p-1 sm:p-2 border-dashed border-2 border-gray-800 bg-transparent h-full">
+                    <div onclick="document.getElementById('gallery-input').click()"
+                         class="flex flex-col items-center justify-center py-8 px-2 cursor-pointer hover:bg-white/5 transition-colors rounded-lg group text-center h-full">
+                        <div class="w-14 h-14 bg-gray-800 text-white border border-gray-700 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-sm font-bold">Gallery</span>
+                        <span class="text-xs text-gray-500 mt-1">Browse files</span>
+                    </div>
+                    <input type="file" id="gallery-input" accept="image/*" multiple class="hidden"
+                           onchange="updateFileList(this)">
+                </div>
+            </div>
 
-        <button type="submit" class="btn-primary w-full py-4 text-lg">
-            <span>Start Analysis</span>
-            <span id="loading-indicator" class="htmx-indicator ml-3">
+            <input type="file" name="images" id="{{ form.images.id_for_label }}" multiple class="hidden">
+
+            <div id="file-list" class="hidden card p-4 space-y-2">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Selected Files</h3>
+                <div id="file-names" class="text-sm space-y-1"></div>
+            </div>
+
+            {% if form.errors %}
+                <div class="rounded-md bg-red-900/50 p-4 border border-red-500/50">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-300">
+                                {% for field, errors in form.errors.items() %}
+                                    {% for error in errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn-primary w-full py-4 text-lg">
+                <span>Start Analysis</span>
+                <span id="loading-indicator" class="htmx-indicator ml-3">
                 <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <path class="opacity-75" fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
             </span>
-        </button>
-    </form>
-</div>
+            </button>
+        </form>
+    </div>
 
-<script>
-function updateFileList(input) {
-    const list = document.getElementById('file-list');
-    const names = document.getElementById('file-names');
-    names.innerHTML = '';
-    
-    if (input.files.length > 0) {
-        list.classList.remove('hidden');
-        Array.from(input.files).forEach(file => {
-            const div = document.createElement('div');
-            div.className = 'flex justify-between items-center text-gray-400';
-            div.innerHTML = `<span>${file.name}</span><span class="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded">${(file.size/1024/1024).toFixed(2)} MB</span>`;
-            names.appendChild(div);
-        });
-    } else {
-        list.classList.add('hidden');
-    }
-}
-</script>
+    <!-- WebRTC Camera Overlay -->
+    <div id="camera-overlay" class="hidden fixed inset-0 z-50 bg-black flex flex-col">
+        <div class="flex justify-between items-center p-4 bg-black text-white z-10">
+            <h3 class="font-bold">Camera</h3>
+            <button type="button" onclick="closeCamera()" class="p-2 rounded-full hover:bg-white/10">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex-grow min-h-0 overflow-hidden relative flex items-center justify-center bg-black">
+            <video id="camera-stream" autoplay playsinline class="w-full h-full object-contain"></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+            <div id="flash-effect"
+                 class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-100"></div>
+        </div>
+
+        <div class="bg-black p-6 pb-8 flex justify-center items-center z-10">
+            <button type="button" onclick="takePhoto()"
+                    class="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center focus:outline-none active:scale-95 transition-transform hover:bg-white/20">
+                <div class="w-12 h-12 bg-white rounded-full"></div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        let cameraStream = null;
+        const MAX_FILE_SIZE = {{ max_upload_size }};
+        const MAX_TOTAL_SIZE = {{ max_total_size }};
+
+        async function openCamera() {
+            const overlay = document.getElementById('camera-overlay');
+            const video = document.getElementById('camera-stream');
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera access is not supported by your browser or requires a secure HTTPS connection.');
+                return;
+            }
+
+            try {
+                // Try rear camera first
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {facingMode: 'environment'},
+                    audio: false
+                });
+            } catch (err) {
+                try {
+                    // Fallback to any available camera (fixes desktop Firefox issues)
+                    cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                } catch (fallbackErr) {
+                    console.error('Error accessing camera:', fallbackErr);
+                    alert('Could not access the camera. Please check your permissions or use the Gallery option.');
+                    return;
+                }
+            }
+
+            video.srcObject = cameraStream;
+            overlay.classList.remove('hidden');
+        }
+
+        function closeCamera() {
+            const overlay = document.getElementById('camera-overlay');
+            const video = document.getElementById('camera-stream');
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            video.srcObject = null;
+            overlay.classList.add('hidden');
+        }
+
+        function takePhoto() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            const flash = document.getElementById('flash-effect');
+
+            if (!cameraStream || !video.videoWidth) return;
+
+            flash.style.opacity = '1';
+            setTimeout(() => {
+                flash.style.opacity = '0';
+            }, 100);
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const timestamp = new Date().getTime();
+                const file = new File([blob], `photo_${timestamp}.jpg`, {type: 'image/jpeg'});
+                handleNewFile(file, true);
+            }, 'image/jpeg', 0.9);
+        }
+
+        function handleNewFile(file, shouldRender = true) {
+            let currentTotalSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`File ${file.name} is too large. Max size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
+                return;
+            }
+            if (currentTotalSize + file.size > MAX_TOTAL_SIZE) {
+                alert(`Total upload size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit.`);
+                return;
+            }
+
+            const isDuplicate = selectedFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+            if (!isDuplicate) {
+                selectedFiles.push(file);
+            }
+
+            if (shouldRender) {
+                renderFiles();
+                updateInputFiles();
+            }
+        }
+
+        function updateFileList(input) {
+            if (input.files.length > 0) {
+                Array.from(input.files).forEach(file => {
+                    handleNewFile(file, false);
+                });
+                renderFiles();
+                updateInputFiles();
+            }
+
+            // Clear the input value so the same file or camera can be triggered again
+            if (input.id !== '{{ form.images.id_for_label }}') {
+                input.value = '';
+            }
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFiles();
+            updateInputFiles();
+        }
+
+        function clearFiles() {
+            selectedFiles = [];
+            renderFiles();
+            updateInputFiles();
+        }
+
+        function renderFiles() {
+            const list = document.getElementById('file-list');
+            const names = document.getElementById('file-names');
+            names.innerHTML = '';
+
+            if (selectedFiles.length > 0) {
+                list.classList.remove('hidden');
+                selectedFiles.forEach((file, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center bg-gray-900/50 p-2 rounded border border-gray-800';
+
+                    const objectUrl = URL.createObjectURL(file);
+
+                    div.innerHTML = `
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <img src="${objectUrl}" class="h-10 w-10 object-cover rounded bg-black flex-shrink-0" />
+                    <span class="truncate text-gray-300 text-sm" title="${file.name}">${file.name}</span>
+                </div>
+                <div class="flex items-center space-x-2 flex-shrink-0 pl-2">
+                    <span class="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 whitespace-nowrap">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <button type="button" onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 transition-colors p-1" title="Remove">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            `;
+                    names.appendChild(div);
+                });
+            } else {
+                list.classList.add('hidden');
+            }
+        }
+
+        function updateInputFiles() {
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(file => dataTransfer.items.add(file));
+            document.getElementById('{{ form.images.id_for_label }}').files = dataTransfer.files;
+        }
+    </script>
 {% endblock %}

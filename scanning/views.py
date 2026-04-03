@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, View
 
-from .forms import ReceiptUploadForm
+from .forms import MAX_TOTAL_SIZE, MAX_UPLOAD_SIZE, ReceiptUploadForm
 from .models import Receipt, ReceiptImage
 from .tasks import process_receipt_task
 
@@ -40,6 +40,12 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
     form_class = ReceiptUploadForm
     template_name = "scanning/upload.html"
     success_url = reverse_lazy("scanning:receipt-list")
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["max_upload_size"] = MAX_UPLOAD_SIZE
+        context["max_total_size"] = MAX_TOTAL_SIZE
+        return context
 
     def form_valid(self, form: ReceiptUploadForm) -> HttpResponse:
         files = self.request.FILES.getlist("images")

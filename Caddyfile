@@ -21,6 +21,9 @@
 
   # Reverse proxy to Django application
   handle {
+    request_body {
+      max_size 50MB
+    }
     reverse_proxy {$UPSTREAM_ADDR:app:8000} {
       header_up X-Real-IP {remote_host}
     }
