@@ -55,7 +55,11 @@ class ReceiptProcessingService:
     def _call_llm(self, receipt: Receipt) -> dict[str, Any]:
         """Send receipt images to LLM and return raw JSON response."""
         prompt = (
-            "Extract transaction details from this receipt. Return a JSON object with:\n"
+            "Extract transaction details from this receipt. You may be provided with one or "
+            "multiple images of the same receipt. If multiple images are provided, they may "
+            "overlap to ensure full coverage. Your task is to merge the information from all "
+            "images into a single, deduplicated logical receipt.\n\n"
+            "Return a JSON object with:\n"
             "- order: {total_price, total_discounts, payment_method, seller_name, "
             "seller_address, seller_order_id}\n"
             "- line_items: [{price, product, quantity, "
@@ -64,7 +68,8 @@ class ReceiptProcessingService:
             "1. seller_order_id should be formatted as key=value strings separated by "
             "spaces and sorted alphabetically.\n"
             "2. All prices and amounts should be numbers.\n"
-            "3. If a field is missing, omit it from the JSON or set to null."
+            "3. If a field is missing, omit it from the JSON or set to null.\n"
+            "4. Deduplicate line items that appear in multiple images due to overlap."
         )
 
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
