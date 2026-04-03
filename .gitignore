@@ -50,3 +50,6 @@ media/
 
 # Terraform lock file
 .terraform.lock.hcl
+
+# Celery Beat
+celerybeat-schedule*
