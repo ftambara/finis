@@ -43,6 +43,15 @@ class ReceiptProcessingService:
         log = logger.bind(receipt_id=receipt.id, user_id=receipt.user.id)
         log.info("receipt_processing_started", image_count=receipt.images.count())
 
+        # Check budget before starting
+        if not receipt.organization.has_budget():
+            error_msg = f"Organization {receipt.organization.name} has exceeded its monthly token limit."
+            log.error("organization_out_of_budget", limit=receipt.organization.spending_tier.token_limit)
+            ReceiptError.objects.update_or_create(receipt=receipt, defaults={"message": error_msg})
+            receipt.status = Receipt.Status.FAILED
+            receipt.save()
+            return
+
         receipt.status = Receipt.Status.PROCESSING
         receipt.save()
 

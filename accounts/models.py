@@ -22,6 +22,19 @@ class Organization(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
 
+    def get_monthly_usage(self) -> int:
+        """Calculate the total tokens used by the organization in the current month."""
+        now = timezone.now()
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        usage = self.token_usages.filter(created_at__gte=start_of_month).aggregate(
+            total=models.Sum("tokens")
+        )["total"]
+        return usage or 0
+
+    def has_budget(self) -> bool:
+        """Check if the organization has budget remaining in its spending tier."""
+        return self.get_monthly_usage() < self.spending_tier.token_limit
+
     def __str__(self) -> str:
         return str(self.name)
 
