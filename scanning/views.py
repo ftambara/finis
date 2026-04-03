@@ -48,14 +48,23 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
         context = super().get_context_data(**kwargs)
         context["max_upload_size"] = MAX_UPLOAD_SIZE
         context["max_total_size"] = MAX_TOTAL_SIZE
+        user = self.request.user
+        if not isinstance(user, AnonymousUser):
+            context["has_budget"] = user.organization.has_budget()
+        else:
+            context["has_budget"] = False
         return context
 
     def form_valid(self, form: ReceiptUploadForm) -> HttpResponse:
-        files = self.request.FILES.getlist("images")
         user = self.request.user
         if isinstance(user, AnonymousUser):
             raise ValueError("User must be authenticated")
 
+        if not user.organization.has_budget():
+            form.add_error(None, "Your organization has reached its monthly token limit.")
+            return self.form_invalid(form)
+
+        files = self.request.FILES.getlist("images")
         log = logger.bind(user_id=user.id, image_count=len(files))
 
         with transaction.atomic():

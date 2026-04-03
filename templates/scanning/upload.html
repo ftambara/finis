@@ -7,7 +7,8 @@
         <div class="mb-10 text-center sm:text-left">
             <h1 class="text-4xl font-extrabold tracking-tight mb-2">Scan Receipt</h1>
             <p class="text-gray-500">Snap a photo or upload files to track your expenses.</p>
-            <p class="mt-4 text-sm text-gray-400">For long receipts, take multiple photos. Ensure they overlap so no items are missed.</p>
+            <p class="mt-4 text-sm text-gray-400">For long receipts, take multiple photos. Ensure they overlap so no
+                items are missed.</p>
         </div>
 
         <form method="post" enctype="multipart/form-data" class="space-y-6"
@@ -75,7 +76,21 @@
                 </div>
             {% endif %}
 
-            <button type="submit" class="btn-primary w-full py-4 text-lg">
+            {% if not has_budget %}
+                <div class="rounded-md bg-red-900/50 p-4 border border-red-500/50">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-300">
+                                Your organization has reached its monthly token limit. Please contact your
+                                administrator.
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn-primary w-full py-4 text-lg" {% if not has_budget %}disabled
+                    style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
                 <span>Start Analysis</span>
                 <span id="loading-indicator" class="htmx-indicator ml-3">
                 <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

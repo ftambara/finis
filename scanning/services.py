@@ -45,8 +45,12 @@ class ReceiptProcessingService:
 
         # Check budget before starting
         if not receipt.organization.has_budget():
-            error_msg = f"Organization {receipt.organization.name} has exceeded its monthly token limit."
-            log.error("organization_out_of_budget", limit=receipt.organization.spending_tier.token_limit)
+            error_msg = (
+                f"Organization {receipt.organization.name} has exceeded its monthly token limit."
+            )
+            log.error(
+                "organization_out_of_budget", limit=receipt.organization.spending_tier.token_limit
+            )
             ReceiptError.objects.update_or_create(receipt=receipt, defaults={"message": error_msg})
             receipt.status = Receipt.Status.FAILED
             receipt.save()
