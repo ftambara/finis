@@ -32,6 +32,8 @@ class ReceiptProcessingService:
         self.api_key = settings.GROK_API_KEY
         self.api_url = settings.GROK_API_URL
         self.model = settings.GROK_MODEL
+        self.max_tokens = settings.GROK_MAX_TOKENS
+        self.timeout = settings.GROK_API_TIMEOUT
         self.requester = requester or urllib.request.urlopen
 
     def process_receipt(self, receipt: Receipt) -> None:
@@ -94,6 +96,7 @@ class ReceiptProcessingService:
             "messages": [{"role": "user", "content": content}],
             "response_format": {"type": "json_object"},
             "temperature": 0,
+            "max_tokens": self.max_tokens,
         }
 
         headers = {
@@ -102,12 +105,15 @@ class ReceiptProcessingService:
         }
 
         req = urllib.request.Request(
-            self.api_url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST"
+            self.api_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
         )
 
-        log.info("llm_request_sent", model=self.model)
+        log.info("llm_request_sent", model=self.model, max_tokens=self.max_tokens)
         try:
-            with self.requester(req) as response:
+            with self.requester(req, timeout=self.timeout) as response:
                 result = json.loads(response.read().decode("utf-8"))
         except urllib.error.URLError as e:
             raise Exception(f"API call failed: {e}") from e
@@ -130,7 +136,12 @@ class ReceiptProcessingService:
         if not choices:
             raise Exception("No choices returned from LLM")
 
-        message_content = choices[0].get("message", {}).get("content", "")
+        choice = choices[0]
+        finish_reason = choice.get("finish_reason")
+        if finish_reason == "length":
+            log.warning("llm_response_truncated", finish_reason=finish_reason)
+
+        message_content = choice.get("message", {}).get("content", "")
         try:
             return cast(dict[str, Any], json.loads(message_content))
         except json.JSONDecodeError as e:
