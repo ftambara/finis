@@ -41,7 +41,8 @@ bin/*.lock
 .*.env
 !.example.env
 
-# Media files
+# Media and static files
+static/
 media/
 
 # Terraform provider/module cache
