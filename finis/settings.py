@@ -117,7 +117,7 @@ AUTH_USER_MODEL = "accounts.User"
 GROK_API_KEY = env.str("GROK_API_KEY")
 GROK_API_URL = env.str("GROK_API_URL", default="https://api.x.ai/v1/chat/completions")
 GROK_MODEL = env.str("GROK_MODEL", default="grok-4-1-fast-non-reasoning")
-GROK_MAX_TOKENS = env.int("GROK_MAX_TOKENS", default=4096)
+GROK_MAX_TOKENS = env.int("GROK_MAX_TOKENS", default=8192)
 GROK_API_TIMEOUT = env.int("GROK_API_TIMEOUT", default=180)
 
 # Celery configuration

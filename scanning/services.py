@@ -122,9 +122,17 @@ class ReceiptProcessingService:
 
         # Record token usage
         usage = result.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
         total_tokens = usage.get("total_tokens", 0)
+
         if total_tokens > 0:
-            log.info("llm_token_usage", total_tokens=total_tokens)
+            log.info(
+                "llm_token_usage",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            )
             TokenUsage.objects.create(
                 organization=receipt.organization,
                 user=receipt.user,
@@ -138,6 +146,8 @@ class ReceiptProcessingService:
 
         choice = choices[0]
         finish_reason = choice.get("finish_reason")
+        log.info("llm_response_received", finish_reason=finish_reason)
+
         if finish_reason == "length":
             log.warning("llm_response_truncated", finish_reason=finish_reason)
 
