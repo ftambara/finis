@@ -35,6 +35,14 @@ class Organization(models.Model):
         """Check if the organization has budget remaining in its spending tier."""
         return self.get_monthly_usage() < self.spending_tier.token_limit
 
+    def get_usage_percentage(self) -> int:
+        """Calculate the percentage of the monthly token limit used."""
+        limit = self.spending_tier.token_limit
+        if limit == 0:
+            return 100
+        usage = self.get_monthly_usage()
+        return min(100, int((usage / limit) * 100))
+
     def __str__(self) -> str:
         return str(self.name)
 

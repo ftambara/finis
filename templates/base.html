@@ -48,6 +48,19 @@
             <div class="flex items-center space-x-6">
                 {% if request.user.is_authenticated %}
                 <a href="{{ url('scanning:receipt-list') }}" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">History</a>
+                
+                <div class="hidden sm:flex flex-col items-end">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-[9px] text-gray-500 uppercase tracking-wider font-bold">Usage</span>
+                        <span class="text-[10px] font-mono text-gray-300">{{ request.user.organization.get_usage_percentage() }}%</span>
+                    </div>
+                    <div class="w-20 h-1 bg-gray-800 rounded-full overflow-hidden">
+                        {% set usage = request.user.organization.get_usage_percentage() %}
+                        <div class="h-full {% if usage > 90 %}bg-red-500{% elif usage > 70 %}bg-yellow-500{% else %}bg-white{% endif %} transition-all duration-500" 
+                             style="width: {{ usage }}%"></div>
+                    </div>
+                </div>
+
                 <a href="{{ url('scanning:receipt-upload') }}" class="bg-white text-black px-4 py-1.5 rounded-full text-sm font-bold hover:opacity-90 transition-opacity">
                     Scan
                 </a>
