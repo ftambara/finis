@@ -1,0 +1,16 @@
+*.pyc
+*.tar.gz
+.*.env
+.cursor/
+.git/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.vscode/
+.zed/
+__pycache__/
+celerybeat-schedule*
+media/
+static/
