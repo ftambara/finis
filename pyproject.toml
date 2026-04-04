@@ -31,11 +31,16 @@ dev = [
     "pytest",
     "pytest-django",
     "celery-types>=0.26.0",
+    "pytest-env>=1.6.0",
 ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "finis.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
+env = [
+    "SCANNING_LLM_PROVIDER=gemini",
+    "GEMINI_API_KEY=dummy-gemini-key",
+]
 
 [tool.ruff]
 line-length = 100

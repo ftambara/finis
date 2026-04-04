@@ -1,8 +1,8 @@
 import json
-import urllib.request
 from typing import Any, Self
 
 import pytest
+from pytest_django.fixtures import SettingsWrapper
 
 from accounts.models import Organization, SpendingTier, User
 from scanning.models import ProcessedReceipt, Receipt
@@ -46,8 +46,13 @@ def receipt(organization: Organization, user: User) -> Receipt:
 
 @pytest.mark.django_db
 class TestReceiptProcessingPipeline:
-    def test_processing_service_success(self, receipt: Receipt) -> None:
-        # Define mock response data
+    def test_processing_service_grok_success(
+        self, receipt: Receipt, settings: SettingsWrapper
+    ) -> None:
+        settings.SCANNING_LLM_PROVIDER = "grok"
+        settings.GROK_API_KEY = "test-key"
+
+        # Define mock response data in Grok (OpenAI) format
         mock_data = {
             "usage": {"total_tokens": 150},
             "choices": [
@@ -78,16 +83,7 @@ class TestReceiptProcessingPipeline:
             ],
         }
 
-        def mock_requester(
-            url: str | urllib.request.Request,
-            data: bytes | None = None,
-            timeout: float = 0.0,
-            *,
-            cafile: str | None = None,
-            capath: str | None = None,
-            cadefault: bool = False,
-            context: object | None = None,
-        ) -> MockResponse:
+        def mock_requester(*args: Any, **kwargs: Any) -> MockResponse:
             return MockResponse(mock_data)
 
         # Execute processing with injected mock requester
@@ -96,7 +92,7 @@ class TestReceiptProcessingPipeline:
 
         # Verify results
         receipt.refresh_from_db()
-        assert receipt.status == Receipt.Status.COMPLETED, receipt.error.message
+        assert receipt.status == Receipt.Status.COMPLETED
 
         processed = ProcessedReceipt.objects.get(receipt=receipt)
         assert processed.total_price == 50.0
@@ -114,10 +110,64 @@ class TestReceiptProcessingPipeline:
         assert discount is not None
         assert discount.amount == 1.0
 
+    def test_processing_service_gemini_success(
+        self, receipt: Receipt, settings: SettingsWrapper
+    ) -> None:
+        settings.SCANNING_LLM_PROVIDER = "gemini"
+        settings.GEMINI_API_KEY = "test-key"
+
+        # Define mock response data in Gemini format
+        mock_data = {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": json.dumps(
+                                    {
+                                        "order": {
+                                            "total_price": 75.0,
+                                            "total_discounts": 0,
+                                            "payment_method": "Cash",
+                                            "seller_name": "Gemini Shop",
+                                            "seller_address": "456 AI Blvd",
+                                            "seller_order_id": "id=abc",
+                                        },
+                                        "line_items": [
+                                            {
+                                                "product": "Bread",
+                                                "price": 3.0,
+                                                "quantity": 1,
+                                            }
+                                        ],
+                                    }
+                                )
+                            }
+                        ]
+                    },
+                    "finishReason": "STOP",
+                }
+            ],
+            "usageMetadata": {"totalTokenCount": 200},
+        }
+
+        def mock_requester(*args: Any, **kwargs: Any) -> MockResponse:
+            return MockResponse(mock_data)
+
+        # Execute processing with injected mock requester
+        service = ReceiptProcessingService(requester=mock_requester)
+        service.process_receipt(receipt)
+
+        # Verify results
+        receipt.refresh_from_db()
+        assert receipt.status == Receipt.Status.COMPLETED
+        processed = ProcessedReceipt.objects.get(receipt=receipt)
+        assert processed.total_price == 75.0
+        assert processed.point_of_sale.seller.name == "Gemini Shop"
+
     def test_task_execution(self, receipt: Receipt, monkeypatch: pytest.MonkeyPatch) -> None:
         # Using monkeypatch to swap the service method for the task test
         # to avoid real network calls during task integration test.
-        # This is a common pytest pattern that is often preferred over unittest.mock.patch.
         calls: list[Receipt] = []
 
         def mock_process(service_inst: object, receipt_obj: Receipt) -> None:

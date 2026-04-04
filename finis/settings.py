@@ -114,11 +114,33 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 
-GROK_API_KEY = env.str("GROK_API_KEY")
+SCANNING_LLM_PROVIDER = env.str("SCANNING_LLM_PROVIDER")
+
+GROK_API_KEY = env.str("GROK_API_KEY", default=None)
 GROK_API_URL = env.str("GROK_API_URL", default="https://api.x.ai/v1/chat/completions")
-GROK_MODEL = env.str("GROK_MODEL", default="grok-4-1-fast-non-reasoning")
+GROK_MODEL = env.str("GROK_MODEL", default="grok-4.20-0309-non-reasoning")
 GROK_MAX_TOKENS = env.int("GROK_MAX_TOKENS", default=8192)
 GROK_API_TIMEOUT = env.int("GROK_API_TIMEOUT", default=180)
+
+GEMINI_API_KEY = env.str("GEMINI_API_KEY", default=None)
+GEMINI_API_URL = env.str(
+    "GEMINI_API_URL", default="https://generativelanguage.googleapis.com/v1beta/models"
+)
+GEMINI_MODEL = env.str("GEMINI_MODEL", default="gemini-3-flash-preview")
+GEMINI_MAX_TOKENS = env.int("GEMINI_MAX_TOKENS", default=8192)
+GEMINI_API_TIMEOUT = env.int("GEMINI_API_TIMEOUT", default=180)
+
+match SCANNING_LLM_PROVIDER:
+    case "grok":
+        if not GROK_API_KEY:
+            raise ValueError("GROK_API_KEY is required when SCANNING_LLM_PROVIDER is 'grok'")
+        SCANNING_MODEL = GROK_MODEL
+    case "gemini":
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is required when SCANNING_LLM_PROVIDER is 'gemini'")
+        SCANNING_MODEL = GEMINI_MODEL
+    case _:
+        raise ValueError(f"Invalid SCANNING_LLM_PROVIDER: {SCANNING_LLM_PROVIDER}")
 
 # Celery configuration
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://localhost:6379/1")

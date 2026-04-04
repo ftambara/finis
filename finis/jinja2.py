@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.conf import settings
 from django.templatetags.static import static
 from django.urls import reverse
 from jinja2 import Environment
@@ -13,4 +14,5 @@ def environment(**options: Any) -> Environment:
     env = Environment(**options)
     env.globals["static"] = static
     env.globals["url"] = url
+    env.globals["SCANNING_MODEL"] = settings.SCANNING_MODEL
     return env
