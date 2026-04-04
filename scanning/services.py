@@ -26,6 +26,45 @@ from .models import (
 logger = structlog.get_logger(__name__)
 
 
+GEMINI_RECEIPT_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "order": {
+            "type": "OBJECT",
+            "properties": {
+                "total_price": {"type": "NUMBER"},
+                "total_discounts": {"type": "NUMBER"},
+                "payment_method": {"type": "STRING"},
+                "seller_name": {"type": "STRING"},
+                "seller_address": {"type": "STRING"},
+                "seller_order_id": {"type": "STRING"},
+            },
+        },
+        "line_items": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "price": {"type": "NUMBER"},
+                    "product": {"type": "STRING"},
+                    "quantity": {"type": "NUMBER"},
+                    "discounts": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "amount": {"type": "NUMBER"},
+                                "description": {"type": "STRING"},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
+
 class UrlResponse(Protocol):
     def read(self) -> bytes: ...
     def __enter__(self) -> Self: ...
@@ -172,6 +211,7 @@ class GeminiProvider:
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "maxOutputTokens": self.max_tokens,
+                "responseJsonSchema": GEMINI_RECEIPT_SCHEMA,
                 "temperature": 0,
             },
         }
@@ -221,23 +261,15 @@ class GeminiProvider:
             raise Exception(f"Gemini LLM returned invalid JSON content: {e}") from e
 
     def _get_prompt(self) -> str:
-        # Same prompt as Grok
         return (
             "Extract transaction details from this receipt. You may be provided with one or "
             "multiple images of the same receipt. If multiple images are provided, they may "
             "overlap to ensure full coverage. Your task is to merge the information from all "
             "images into a single, deduplicated logical receipt.\n\n"
-            "Return a JSON object with:\n"
-            "- order: {total_price, total_discounts, payment_method, seller_name, "
-            "seller_address, seller_order_id}\n"
-            "- line_items: [{price, product, quantity, "
-            "discounts: [{amount, description}]}]\n\n"
             "Rules:\n"
             "1. seller_order_id should be formatted as key=value strings separated by "
             "spaces and sorted alphabetically.\n"
-            "2. All prices and amounts should be numbers.\n"
-            "3. If a field is missing, omit it from the JSON or set to null.\n"
-            "4. Deduplicate line items that appear in multiple images due to overlap."
+            "2. Deduplicate line items that appear in multiple images due to overlap."
         )
 
 
