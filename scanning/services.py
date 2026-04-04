@@ -2,8 +2,8 @@ import base64
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Callable
-from typing import Any, cast
+import urllib.response
+from typing import Any, Protocol, Self, cast
 
 import structlog
 from django.conf import settings
@@ -27,8 +27,28 @@ from .models import (
 logger = structlog.get_logger(__name__)
 
 
+class UrlResponse(Protocol):
+    def read(self) -> bytes: ...
+    def __enter__(self) -> Self: ...
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None: ...
+
+
+class Requester(Protocol):
+    def __call__(
+        self,
+        url: str | urllib.request.Request,
+        data: bytes | None = None,
+        timeout: float = ...,
+        *,
+        cafile: str | None = None,
+        capath: str | None = None,
+        cadefault: bool = False,
+        context: object | None = None,
+    ) -> UrlResponse: ...
+
+
 class ReceiptProcessingService:
-    def __init__(self, requester: Callable[..., Any] | None = None) -> None:
+    def __init__(self, requester: Requester | None = None) -> None:
         self.api_key = settings.GROK_API_KEY
         self.api_url = settings.GROK_API_URL
         self.model = settings.GROK_MODEL

@@ -1,4 +1,5 @@
 import json
+import urllib.request
 from typing import Any, Self
 
 import pytest
@@ -77,7 +78,16 @@ class TestReceiptProcessingPipeline:
             ],
         }
 
-        def mock_requester(req: object) -> MockResponse:
+        def mock_requester(
+            url: str | urllib.request.Request,
+            data: bytes | None = None,
+            timeout: float = 0.0,
+            *,
+            cafile: str | None = None,
+            capath: str | None = None,
+            cadefault: bool = False,
+            context: object | None = None,
+        ) -> MockResponse:
             return MockResponse(mock_data)
 
         # Execute processing with injected mock requester
@@ -86,7 +96,7 @@ class TestReceiptProcessingPipeline:
 
         # Verify results
         receipt.refresh_from_db()
-        assert receipt.status == Receipt.Status.COMPLETED
+        assert receipt.status == Receipt.Status.COMPLETED, receipt.error.message
 
         processed = ProcessedReceipt.objects.get(receipt=receipt)
         assert processed.total_price == 50.0
