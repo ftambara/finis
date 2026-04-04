@@ -8,6 +8,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -17,6 +21,10 @@ provider "hcloud" {
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
+}
+
+data "http" "my_ip" {
+  url = "https://ipv4.icanhazip.com"
 }
 
 data "hcloud_image" "latest_finis" {
@@ -41,10 +49,9 @@ resource "hcloud_firewall" "finis_fw" {
     protocol  = "tcp"
     port      = "22"
     source_ips = [
-      "0.0.0.0/0",
-      "::/0"
+      "${chomp(data.http.my_ip.response_body)}/32"
     ]
-    description = "Allow SSH"
+    description = "Allow SSH from current public IP"
   }
   rule {
     direction = "in"
