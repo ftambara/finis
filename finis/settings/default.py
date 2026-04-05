@@ -4,14 +4,18 @@ from typing import Any
 import structlog
 from environs import Env
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 env = Env()
 env.read_env()
 
+logger = structlog.get_logger(__name__)
+
+DEBUG = env.bool("DEBUG", default=False)
+
 DEFAULT_SECRET_KEY = "django-insecure-k_@40wpb#=*-hdd_mi9k9y(5=$u4d&#v3x%he4nwedyb!=34kf"
 SECRET_KEY = env.str("SECRET_KEY", default=DEFAULT_SECRET_KEY)
-DEBUG = env.bool("DEBUG", default=False)
+
 LOCAL_HTTPS = env.bool("LOCAL_HTTPS", default=True)
 
 ALLOWED_HOSTS: list[str] = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
@@ -23,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "finis.apps.FinisConfig",
     "django_htmx",
     "rest_framework",
     "accounts",
@@ -39,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
+    "posthog.integrations.django.PosthogContextMiddleware",
 ]
 
 ROOT_URLCONF = "finis.urls"
@@ -90,7 +96,8 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -114,7 +121,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 
-SCANNING_LLM_PROVIDER = env.str("SCANNING_LLM_PROVIDER")
+SCANNING_LLM_PROVIDER = env.str("SCANNING_LLM_PROVIDER", default="")
 
 GROK_API_KEY = env.str("GROK_API_KEY", default=None)
 GROK_API_URL = env.str("GROK_API_URL", default="https://api.x.ai/v1/chat/completions")
@@ -132,15 +139,11 @@ GEMINI_API_TIMEOUT = env.int("GEMINI_API_TIMEOUT", default=180)
 
 match SCANNING_LLM_PROVIDER:
     case "grok":
-        if not GROK_API_KEY:
-            raise ValueError("GROK_API_KEY is required when SCANNING_LLM_PROVIDER is 'grok'")
         SCANNING_MODEL = GROK_MODEL
     case "gemini":
-        if not GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY is required when SCANNING_LLM_PROVIDER is 'gemini'")
         SCANNING_MODEL = GEMINI_MODEL
     case _:
-        raise ValueError(f"Invalid SCANNING_LLM_PROVIDER: {SCANNING_LLM_PROVIDER}")
+        SCANNING_MODEL = ""
 
 # Celery configuration
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://localhost:6379/1")

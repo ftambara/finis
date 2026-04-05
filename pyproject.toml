@@ -35,7 +35,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "finis.settings"
+DJANGO_SETTINGS_MODULE = "finis.settings.default"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 env = [
     "SCANNING_LLM_PROVIDER=gemini",
@@ -68,4 +68,4 @@ check_untyped_defs = true
 disallow_untyped_defs = true
 
 [tool.django-stubs]
-django_settings_module = "finis.settings"
+django_settings_module = "finis.settings.default"
