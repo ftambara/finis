@@ -11,4 +11,5 @@ urlpatterns = [
     path(
         "xhr/receipt/<int:pk>/status/", views.ReceiptStatusView.as_view(), name="receipt-xhr-status"
     ),
+    path("event/", views.DummyEventView.as_view(), name="generate-event"),
 ]

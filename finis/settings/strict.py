@@ -1,3 +1,4 @@
+# ruff: noqa: F403, F405 - Star import is required to inherit and re-export all default settings.
 from .default import *
 
 
@@ -16,10 +17,15 @@ check("*" not in ALLOWED_HOSTS, "Wildcard present in ALLOWED_HOSTS")
 
 match SCANNING_LLM_PROVIDER:
     case "grok":
-        check(bool(GROK_API_KEY),
-              "GROK_API_KEY is required when SCANNING_LLM_PROVIDER is 'grok'")
+        check(bool(GROK_API_KEY), "GROK_API_KEY is required when SCANNING_LLM_PROVIDER is 'grok'")
     case "gemini":
-        check(bool(GEMINI_API_KEY),
-              "GEMINI_API_KEY is required when SCANNING_LLM_PROVIDER is 'gemini'")
+        check(
+            bool(GEMINI_API_KEY),
+            "GEMINI_API_KEY is required when SCANNING_LLM_PROVIDER is 'gemini'",
+        )
     case _:
         check(False, f"Invalid SCANNING_LLM_PROVIDER: {SCANNING_LLM_PROVIDER}")
+
+# PostHog configuration
+check(bool(POSTHOG_API_KEY), "POSTHOG_API key not set")
+check(bool(POSTHOG_HOST), "POSTHOG_HOST key not set")

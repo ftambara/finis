@@ -96,8 +96,7 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -144,6 +143,10 @@ match SCANNING_LLM_PROVIDER:
         SCANNING_MODEL = GEMINI_MODEL
     case _:
         SCANNING_MODEL = ""
+
+# PostHog configuration
+POSTHOG_API_KEY = env.str("POSTHOG_API_KEY", default="")
+POSTHOG_HOST = env.str("POSTHOG_HOST", default="")
 
 # Celery configuration
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://localhost:6379/1")

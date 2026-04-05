@@ -1,5 +1,6 @@
 from typing import Any
 
+import posthog
 import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
@@ -110,3 +111,11 @@ class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin, View):
             return render(request, template, {"receipt": receipt})
 
         return redirect("scanning:receipt-detail", pk=pk)
+
+
+class DummyEventView(LoginRequiredMixin, OrganizationFilteredMixin, View):
+    def get(self, request: HttpRequest) -> HttpResponse:
+        with posthog.new_context():
+            posthog.identify_context(request.user.pk)
+            posthog.capture("dummy-event")
+        return HttpResponse(content=b"Event recorded.")
