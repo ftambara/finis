@@ -1,4 +1,4 @@
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 import posthog
 import structlog
@@ -18,30 +18,23 @@ from .tasks import process_receipt_task
 logger = structlog.get_logger(__name__)
 
 
-class _QuerySetView[T: Model](Protocol):
-    """Structural contract: what this mixin requires from its base class."""
-
-    request: HttpRequest
-
-    def get_queryset(self) -> QuerySet[T]:
-        return cast(QuerySet[T], None)
-
-
 class OrganizationFilteredMixin[T: Model]:
     """Filters querysets to the requesting user's organization."""
 
     request: HttpRequest
+    model: type[T] | None = None
 
-    def get_queryset(self: _QuerySetView[T]) -> QuerySet[T]:
+    def get_queryset(self) -> QuerySet[T]:
         user = self.request.user
         assert not isinstance(user, AnonymousUser)
 
         try:
-            qs = super().get_queryset()
+            qs = super().get_queryset()  # type: ignore[misc]
         except AttributeError:
-            qs = self.model.objects.all()
+            assert self.model is not None
+            qs = getattr(self.model, "objects").all()
 
-        return qs.filter(organization=user.organization)
+        return cast(QuerySet[T], qs.filter(organization=user.organization))
 
 
 class ReceiptListView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], ListView[Receipt]):

@@ -182,7 +182,8 @@ class GrokProvider:
 
 class GeminiProvider:
     def __init__(self, requester: Requester | None = None) -> None:
-        self.api_key = settings.GEMINI_API_KEY
+        assert settings.GEMINI_API_KEY
+        self.api_key: str = settings.GEMINI_API_KEY
         self.api_url = settings.GEMINI_API_URL
         self.model = settings.GEMINI_MODEL
         self.max_tokens = settings.GEMINI_MAX_TOKENS

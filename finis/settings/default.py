@@ -27,7 +27,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "finis.apps.FinisConfig",
     "django_htmx",
     "rest_framework",
     "accounts",
