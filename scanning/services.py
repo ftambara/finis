@@ -25,7 +25,6 @@ from .models import (
 
 logger = structlog.get_logger(__name__)
 
-
 GEMINI_RECEIPT_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -67,7 +66,9 @@ GEMINI_RECEIPT_SCHEMA = {
 
 class UrlResponse(Protocol):
     def read(self) -> bytes: ...
+
     def __enter__(self) -> Self: ...
+
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None: ...
 
 

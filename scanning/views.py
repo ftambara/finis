@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, Protocol, cast
 
 import posthog
 import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Model, QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -18,21 +18,33 @@ from .tasks import process_receipt_task
 logger = structlog.get_logger(__name__)
 
 
-class OrganizationFilteredMixin:
-    """Mixin to filter querysets by the user's organization."""
+class _QuerySetView[T: Model](Protocol):
+    """Structural contract: what this mixin requires from its base class."""
 
-    def get_queryset(self: Any) -> QuerySet[Receipt]:
-        # Handle cases where the base class doesn't have get_queryset (like View)
-        qs = super().get_queryset() if hasattr(super(), "get_queryset") else Receipt.objects.all()  # type: ignore[misc]
+    request: HttpRequest
 
+    def get_queryset(self) -> QuerySet[T]:
+        return cast(QuerySet[T], None)
+
+
+class OrganizationFilteredMixin[T: Model]:
+    """Filters querysets to the requesting user's organization."""
+
+    request: HttpRequest
+
+    def get_queryset(self: _QuerySetView[T]) -> QuerySet[T]:
         user = self.request.user
-        if isinstance(user, AnonymousUser):
-            return Receipt.objects.none()
+        assert not isinstance(user, AnonymousUser)
+
+        try:
+            qs = super().get_queryset()
+        except AttributeError:
+            qs = self.model.objects.all()
 
         return qs.filter(organization=user.organization)
 
 
-class ReceiptListView(LoginRequiredMixin, OrganizationFilteredMixin, ListView[Receipt]):
+class ReceiptListView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], ListView[Receipt]):
     model = Receipt
     template_name = "scanning/list.html"
     context_object_name = "receipts"
@@ -85,14 +97,18 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
         return HttpResponseRedirect(self.get_success_url())
 
 
-class ReceiptDetailView(LoginRequiredMixin, OrganizationFilteredMixin, DetailView[Receipt]):
+class ReceiptDetailView(
+    LoginRequiredMixin, OrganizationFilteredMixin[Receipt], DetailView[Receipt]
+):
     model = Receipt
     template_name = "scanning/detail.html"
     context_object_name = "receipt"
 
 
-class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin, View):
+class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], View):
     """View to return the status of a receipt for HTMX polling."""
+
+    model = Receipt
 
     def get(self, request: HttpRequest, pk: int) -> HttpResponse:
         receipt = get_object_or_404(self.get_queryset(), pk=pk)
@@ -113,9 +129,9 @@ class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin, View):
         return redirect("scanning:receipt-detail", pk=pk)
 
 
-class DummyEventView(LoginRequiredMixin, OrganizationFilteredMixin, View):
+class DummyEventView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], View):
     def get(self, request: HttpRequest) -> HttpResponse:
-        with posthog.new_context():
-            posthog.identify_context(request.user.pk)
+        with posthog.contexts.new_context():
+            posthog.contexts.identify_context(str(request.user.pk))
             posthog.capture("dummy-event")
         return HttpResponse(content=b"Event recorded.")
