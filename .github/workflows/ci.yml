@@ -13,7 +13,8 @@ jobs:
     
     env:
       SECRET_KEY: "ci-secret-key"
-      DATABASE_URL: "postgres://finis:secret@localhost:5432/finis"
+      DATABASE_URL: "postgres://finis_customer:secret@localhost:5432/finis"
+      ADMIN_DATABASE_URL: "postgres://finis:secret@localhost:5432/finis"
       REDIS_URL: "redis://localhost:6379/1"
       GROK_API_KEY: "dummy-key"
 
