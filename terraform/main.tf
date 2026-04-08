@@ -48,10 +48,12 @@ resource "hcloud_firewall" "finis_fw" {
     direction = "in"
     protocol  = "tcp"
     port      = "22"
+    # I would like to be more restrictive but GH pipelines become hard to manage.
     source_ips = [
-      "${chomp(data.http.my_ip.response_body)}/32"
+      "0.0.0.0/0",
+      "::/0",
     ]
-    description = "Allow SSH from current public IP"
+    description = "Allow SSH from all IPs"
   }
   rule {
     direction = "in"
