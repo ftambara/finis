@@ -10,18 +10,18 @@ from scanning.models import Receipt
 
 @pytest.fixture
 def organization(db: object) -> Organization:
-    tier = SpendingTier.objects.create(name="Standard", token_limit=1000)
-    return Organization.objects.create(name="Acme Corp", spending_tier=tier)
+    tier = SpendingTier.objects.using("admin").create(name="Standard", token_limit=1000)
+    return Organization.objects.using("admin").create(name="Acme Corp", spending_tier=tier)
 
 
 @pytest.fixture
 def user(organization: Organization) -> User:
-    return User.objects.create_user(
+    return User.objects.db_manager("admin").create_user(
         email="test@example.com", password="password", organization=organization
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True, databases="__all__")
 class TestUploadLimits:
     def test_individual_file_size_limit(
         self, client: Client, user: User, organization: Organization
@@ -33,7 +33,7 @@ class TestUploadLimits:
         data = MultiValueDict({"images": [image]})
 
         response = client.post(reverse("scanning:receipt-upload"), data=data, follow=True)
-        assert Receipt.objects.filter(organization=organization).count() == 0
+        assert Receipt.objects.using("admin").filter(organization_id=organization.id).count() == 0
         assert "is too large. Max size is 10MB." in response.content.decode()
 
     def test_total_file_size_limit(
@@ -49,5 +49,5 @@ class TestUploadLimits:
         data = {"images": images}
 
         response = client.post(reverse("scanning:receipt-upload"), data=data, follow=True)
-        assert Receipt.objects.filter(organization=organization).count() == 0
+        assert Receipt.objects.using("admin").filter(organization_id=organization.id).count() == 0
         assert "Total upload size exceeds 50MB." in response.content.decode()

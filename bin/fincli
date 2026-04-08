@@ -11,6 +11,7 @@ sys.path.insert(0, str(BASE_DIR))
 # E402 is ignored because django.setup() must be called before
 # importing any app-specific models or components that depend on Django settings.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finis.settings.strict")
+os.environ.setdefault("FINIS_CLI_MODE", "1")
 import django  # noqa: E402
 
 django.setup()

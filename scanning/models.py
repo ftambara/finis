@@ -57,7 +57,15 @@ class ReceiptError(models.Model):
 
 
 class Seller(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="sellers",
+    )
+
+    class Meta:
+        unique_together = ("name", "organization")
 
     def __str__(self) -> str:
         return self.name

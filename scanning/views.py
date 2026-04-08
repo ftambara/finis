@@ -1,15 +1,15 @@
-from typing import Any, cast
+from typing import Any
 
-import posthog
+import posthog.contexts
 import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from django.db.models import Model, QuerySet
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, View
+
+from accounts.utils import get_auth_user
 
 from .forms import MAX_TOTAL_SIZE, MAX_UPLOAD_SIZE, ReceiptUploadForm
 from .models import Receipt, ReceiptImage
@@ -18,26 +18,7 @@ from .tasks import process_receipt_task
 logger = structlog.get_logger(__name__)
 
 
-class OrganizationFilteredMixin[T: Model]:
-    """Filters querysets to the requesting user's organization."""
-
-    request: HttpRequest
-    model: type[T] | None = None
-
-    def get_queryset(self) -> QuerySet[T]:
-        user = self.request.user
-        assert not isinstance(user, AnonymousUser)
-
-        try:
-            qs = super().get_queryset()  # type: ignore[misc]
-        except AttributeError:
-            assert self.model is not None
-            qs = getattr(self.model, "objects").all()
-
-        return cast(QuerySet[T], qs.filter(organization=user.organization))
-
-
-class ReceiptListView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], ListView[Receipt]):
+class ReceiptListView(LoginRequiredMixin, ListView[Receipt]):
     model = Receipt
     template_name = "scanning/list.html"
     context_object_name = "receipts"
@@ -54,17 +35,15 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
         context = super().get_context_data(**kwargs)
         context["max_upload_size"] = MAX_UPLOAD_SIZE
         context["max_total_size"] = MAX_TOTAL_SIZE
-        user = self.request.user
-        if not isinstance(user, AnonymousUser):
+        try:
+            user = get_auth_user(self.request)
             context["has_budget"] = user.organization.has_budget()
-        else:
+        except ValueError:
             context["has_budget"] = False
         return context
 
     def form_valid(self, form: ReceiptUploadForm) -> HttpResponse:
-        user = self.request.user
-        if isinstance(user, AnonymousUser):
-            raise ValueError("User must be authenticated")
+        user = get_auth_user(self.request)
 
         if not user.organization.has_budget():
             form.add_error(None, "Your organization has reached its monthly token limit.")
@@ -84,27 +63,24 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
                 ReceiptImage.objects.create(receipt=self.object, image=f, sequence=i)
 
         receipt_id = self.object.id
+        org_id = user.organization_id
         log.info("receipt_upload_success", receipt_id=receipt_id)
-        transaction.on_commit(lambda: process_receipt_task.delay(receipt_id))
+        transaction.on_commit(lambda: process_receipt_task.delay(receipt_id, org_id))
 
         return HttpResponseRedirect(self.get_success_url())
 
 
-class ReceiptDetailView(
-    LoginRequiredMixin, OrganizationFilteredMixin[Receipt], DetailView[Receipt]
-):
+class ReceiptDetailView(LoginRequiredMixin, DetailView[Receipt]):
     model = Receipt
     template_name = "scanning/detail.html"
     context_object_name = "receipt"
 
 
-class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], View):
+class ReceiptStatusView(LoginRequiredMixin, View):
     """View to return the status of a receipt for HTMX polling."""
 
-    model = Receipt
-
     def get(self, request: HttpRequest, pk: int) -> HttpResponse:
-        receipt = get_object_or_404(self.get_queryset(), pk=pk)
+        receipt = get_object_or_404(Receipt, pk=pk)
 
         if request.headers.get("HX-Request"):
             logger.info("receipt_status_poll", receipt_id=receipt.id, status=receipt.status)
@@ -122,9 +98,10 @@ class ReceiptStatusView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], 
         return redirect("scanning:receipt-detail", pk=pk)
 
 
-class DummyEventView(LoginRequiredMixin, OrganizationFilteredMixin[Receipt], View):
+class DummyEventView(LoginRequiredMixin, View):
     def get(self, request: HttpRequest) -> HttpResponse:
+        user = get_auth_user(request)
         with posthog.contexts.new_context():
-            posthog.contexts.identify_context(str(request.user.pk))
+            posthog.contexts.identify_context(str(user.pk))
             posthog.capture("dummy-event")
         return HttpResponse(content=b"Event recorded.")

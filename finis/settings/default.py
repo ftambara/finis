@@ -40,11 +40,16 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.tenant_middleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
-    "posthog.integrations.django.PosthogContextMiddleware",
 ]
+
+posthog_enabled = env.bool("POSTHOG_ENABLED", default=True)
+
+if posthog_enabled:
+    MIDDLEWARE.append("posthog.integrations.django.PosthogContextMiddleware")
 
 ROOT_URLCONF = "finis.urls"
 
@@ -73,10 +78,16 @@ TEMPLATES: list[dict[str, Any]] = [
 
 WSGI_APPLICATION = "finis.wsgi.application"
 
-DEFAULT_DB_URL = "postgres://finis:secret@localhost:5432/finis"
+DEFAULT_DB_URL = "postgres://finis_customer:secret@localhost:5432/finis"
+ADMIN_DB_URL = "postgres://finis:secret@localhost:5432/finis"
 DATABASES = {
     "default": env.dj_db_url("DATABASE_URL", default=DEFAULT_DB_URL),
+    "admin": env.dj_db_url("ADMIN_DATABASE_URL", default=ADMIN_DB_URL),
 }
+
+# In CLI mode, the 'default' connection uses the 'admin' role to bypass RLS.
+if env.bool("FINIS_CLI_MODE", default=False):
+    DATABASES["default"] = DATABASES["admin"]
 
 CACHES = {
     "default": {
@@ -118,6 +129,10 @@ USE_X_FORWARDED_PORT = LOCAL_HTTPS
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.AdminDBModelBackend",
+]
 
 SCANNING_LLM_PROVIDER = env.str("SCANNING_LLM_PROVIDER", default="")
 

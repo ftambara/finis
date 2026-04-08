@@ -10,31 +10,31 @@ from scanning.models import Receipt, ReceiptImage
 
 @pytest.fixture
 def organization(db: object) -> Organization:
-    tier = SpendingTier.objects.create(name="Standard", token_limit=1000)
-    return Organization.objects.create(name="Acme Corp", spending_tier=tier)
+    tier = SpendingTier.objects.using("admin").create(name="Standard", token_limit=1000)
+    return Organization.objects.using("admin").create(name="Acme Corp", spending_tier=tier)
 
 
 @pytest.fixture
 def other_organization(db: object) -> Organization:
-    tier = SpendingTier.objects.create(name="Premium", token_limit=5000)
-    return Organization.objects.create(name="Other Corp", spending_tier=tier)
+    tier = SpendingTier.objects.using("admin").create(name="Premium", token_limit=5000)
+    return Organization.objects.using("admin").create(name="Other Corp", spending_tier=tier)
 
 
 @pytest.fixture
 def user(organization: Organization) -> User:
-    return User.objects.create_user(
+    return User.objects.db_manager("admin").create_user(
         email="test@example.com", password="password", organization=organization
     )
 
 
 @pytest.fixture
 def other_user(other_organization: Organization) -> User:
-    return User.objects.create_user(
+    return User.objects.db_manager("admin").create_user(
         email="other@example.com", password="password", organization=other_organization
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True, databases="__all__")
 class TestScanningViews:
     def test_receipt_list_scopes_to_organization(
         self,
@@ -45,10 +45,10 @@ class TestScanningViews:
         other_organization: Organization,
     ) -> None:
         # Create receipts for both organizations
-        r1 = Receipt.objects.create(
+        r1 = Receipt.objects.using("admin").create(
             organization=organization, user=user, status=Receipt.Status.PENDING
         )
-        r2 = Receipt.objects.create(
+        r2 = Receipt.objects.using("admin").create(
             organization=other_organization, user=other_user, status=Receipt.Status.PENDING
         )
 
@@ -69,12 +69,12 @@ class TestScanningViews:
         data = MultiValueDict({"images": [image]})
         response = client.post(reverse("scanning:receipt-upload"), data=data, follow=True)
 
-        if Receipt.objects.filter(organization=organization).count() == 0:
+        if Receipt.objects.using("admin").filter(organization_id=organization.id).count() == 0:
             print("Upload failed, content snippet:", response.content.decode()[:500])
 
         assert response.status_code == 200
-        assert Receipt.objects.filter(organization=organization).count() == 1
-        assert ReceiptImage.objects.count() == 1
+        assert Receipt.objects.using("admin").filter(organization_id=organization.id).count() == 1
+        assert ReceiptImage.objects.using("admin").count() == 1
 
     def test_receipt_detail_denies_other_organization(
         self,
@@ -83,7 +83,7 @@ class TestScanningViews:
         other_user: User,
         other_organization: Organization,
     ) -> None:
-        receipt = Receipt.objects.create(
+        receipt = Receipt.objects.using("admin").create(
             organization=other_organization, user=other_user, status=Receipt.Status.PENDING
         )
 
@@ -95,7 +95,7 @@ class TestScanningViews:
     def test_receipt_status_xhr(
         self, client: Client, user: User, organization: Organization
     ) -> None:
-        receipt = Receipt.objects.create(
+        receipt = Receipt.objects.using("admin").create(
             organization=organization, user=user, status=Receipt.Status.PROCESSING
         )
 
@@ -112,7 +112,7 @@ class TestScanningViews:
     def test_receipt_status_xhr_mobile(
         self, client: Client, user: User, organization: Organization
     ) -> None:
-        receipt = Receipt.objects.create(
+        receipt = Receipt.objects.using("admin").create(
             organization=organization, user=user, status=Receipt.Status.PROCESSING
         )
 

@@ -41,6 +41,7 @@ python_files = ["tests.py", "test_*.py", "*_tests.py"]
 env = [
     "SCANNING_LLM_PROVIDER=gemini",
     "GEMINI_API_KEY=dummy-gemini-key",
+    "POSTHOG_ENABLED=false",
 ]
 
 [tool.ruff]
@@ -53,6 +54,7 @@ ignore = ["COM812"]
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/**" = ["ANN"]
+"**/migrations/**" = ["E501"]
 
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true

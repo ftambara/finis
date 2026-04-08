@@ -6,10 +6,14 @@ from accounts.models import Organization, SpendingTier, User
 
 
 class AuthenticationTests(TestCase):
+    databases = {"default", "admin"}
+
     def setUp(self) -> None:
-        self.tier = SpendingTier.objects.create(name="Free", token_limit=1000)
-        self.org = Organization.objects.create(name="Test Org", spending_tier=self.tier)
-        self.user = User.objects.create_user(
+        self.tier = SpendingTier.objects.using("admin").create(name="Free", token_limit=1000)
+        self.org = Organization.objects.using("admin").create(
+            name="Test Org", spending_tier=self.tier
+        )
+        self.user = User.objects.db_manager("admin").create_user(
             email="test@example.com",
             password="testpassword123",
             organization=self.org,

@@ -350,7 +350,9 @@ class ReceiptProcessingService:
         seller_name = order_data.get("seller_name") or "Unknown Seller"
         seller_address = order_data.get("seller_address") or "Unknown Address"
 
-        seller, _ = Seller.objects.get_or_create(name=seller_name)
+        seller, _ = Seller.objects.get_or_create(
+            name=seller_name, organization_id=receipt.organization_id
+        )
         pos, _ = PointOfSale.objects.get_or_create(seller=seller, address=seller_address)
 
         # 2. Processed Receipt

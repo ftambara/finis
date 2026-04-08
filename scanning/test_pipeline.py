@@ -2,9 +2,11 @@ import json
 from typing import Any, Self
 
 import pytest
+from django.db import transaction
 from pytest_django.fixtures import SettingsWrapper
 
 from accounts.models import Organization, SpendingTier, User
+from accounts.utils import set_tenant
 from scanning.models import ProcessedReceipt, Receipt
 from scanning.services import ReceiptProcessingService
 from scanning.tasks import process_receipt_task
@@ -26,25 +28,25 @@ class MockResponse:
 
 @pytest.fixture
 def organization(db: object) -> Organization:
-    tier = SpendingTier.objects.create(name="Standard", token_limit=1000)
-    return Organization.objects.create(name="Acme Corp", spending_tier=tier)
+    tier = SpendingTier.objects.using("admin").create(name="Standard", token_limit=1000)
+    return Organization.objects.using("admin").create(name="Acme Corp", spending_tier=tier)
 
 
 @pytest.fixture
 def user(organization: Organization) -> User:
-    return User.objects.create_user(
+    return User.objects.db_manager("admin").create_user(
         email="test@example.com", password="password", organization=organization
     )
 
 
 @pytest.fixture
 def receipt(organization: Organization, user: User) -> Receipt:
-    return Receipt.objects.create(
+    return Receipt.objects.using("admin").create(
         organization=organization, user=user, status=Receipt.Status.PENDING
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True, databases="__all__")
 class TestReceiptProcessingPipeline:
     def test_processing_service_grok_success(
         self, receipt: Receipt, settings: SettingsWrapper
@@ -87,14 +89,17 @@ class TestReceiptProcessingPipeline:
             return MockResponse(mock_data)
 
         # Execute processing with injected mock requester
-        service = ReceiptProcessingService(requester=mock_requester)
-        service.process_receipt(receipt)
+        with transaction.atomic():
+            set_tenant(receipt.organization_id)
+            receipt_default = Receipt.objects.get(id=receipt.id)
+            service = ReceiptProcessingService(requester=mock_requester)
+            service.process_receipt(receipt_default)
 
         # Verify results
-        receipt.refresh_from_db()
-        assert receipt.status == Receipt.Status.COMPLETED
+        receipt_admin = Receipt.objects.using("admin").get(id=receipt.id)
+        assert receipt_admin.status == Receipt.Status.COMPLETED
 
-        processed = ProcessedReceipt.objects.get(receipt=receipt)
+        processed = ProcessedReceipt.objects.using("admin").get(receipt_id=receipt.id)
         assert processed.total_price == 50.0
         assert processed.point_of_sale.seller.name == "Test Store"
         assert processed.point_of_sale.address == "123 Test St"
@@ -155,13 +160,16 @@ class TestReceiptProcessingPipeline:
             return MockResponse(mock_data)
 
         # Execute processing with injected mock requester
-        service = ReceiptProcessingService(requester=mock_requester)
-        service.process_receipt(receipt)
+        with transaction.atomic():
+            set_tenant(receipt.organization_id)
+            receipt_default = Receipt.objects.get(id=receipt.id)
+            service = ReceiptProcessingService(requester=mock_requester)
+            service.process_receipt(receipt_default)
 
         # Verify results
-        receipt.refresh_from_db()
-        assert receipt.status == Receipt.Status.COMPLETED
-        processed = ProcessedReceipt.objects.get(receipt=receipt)
+        receipt_admin = Receipt.objects.using("admin").get(id=receipt.id)
+        assert receipt_admin.status == Receipt.Status.COMPLETED
+        processed = ProcessedReceipt.objects.using("admin").get(receipt_id=receipt.id)
         assert processed.total_price == 75.0
         assert processed.point_of_sale.seller.name == "Gemini Shop"
 
@@ -175,6 +183,8 @@ class TestReceiptProcessingPipeline:
 
         monkeypatch.setattr(ReceiptProcessingService, "process_receipt", mock_process)
 
-        process_receipt_task(receipt.id)
+        with transaction.atomic():
+            process_receipt_task(receipt.id, receipt.organization_id)
+
         assert len(calls) == 1
         assert calls[0].id == receipt.id
