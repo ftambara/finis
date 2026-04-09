@@ -1,16 +1,36 @@
-name: Deploy
+name: Migrations
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    branches: [master]
-    types:
-      - completed
+  push:
+    branches: [ master ]
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  detect:
     runs-on: ubuntu-latest
+    outputs:
+      has_migrations: ${{ steps.check.outputs.has_migrations }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 2
+
+      - name: Check for migrations
+        id: check
+        run: |
+          # Detect if any files were added or modified in migrations folders (excluding __init__.py)
+          if git diff --name-only HEAD^ HEAD | grep -qE '**/migrations/.*\.py' && ! git diff --name-only HEAD^ HEAD | grep -qE '**/migrations/__init__\.py'; then
+            echo "has_migrations=true" >> $GITHUB_OUTPUT
+            echo "Pending migrations detected."
+          else
+            echo "has_migrations=false" >> $GITHUB_OUTPUT
+            echo "No migrations detected."
+          fi
+
+  migrate:
+    needs: detect
+    if: needs.detect.outputs.has_migrations == 'true'
+    runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -25,10 +45,6 @@ jobs:
           IP=$(curl -sf -H "Authorization: Bearer $HCLOUD_TOKEN" \
             "https://api.hetzner.cloud/v1/servers?label_selector=project%3Dfinis" \
             | jq -r '.servers[0].public_net.ipv4.ip')
-          if [ -z "$IP" ] || [ "$IP" = "null" ]; then
-            echo "Error: No server found with label project=finis"
-            exit 1
-          fi
           echo "ip=$IP" >> $GITHUB_OUTPUT
 
       - name: Setup SSH
@@ -40,25 +56,13 @@ jobs:
       - name: Build Image
         run: ./scripts/build-image.sh ${{ github.sha }}
 
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: finis-image-${{ github.sha }}
-          path: finis_${{ github.sha }}.tar.gz
-          retention-days: 7
-
       - name: Remote Prepare
         env:
           PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
           SERVER_IP: ${{ steps.get_ip.outputs.ip }}
         run: ./scripts/prepare-remote.sh "$SERVER_IP" ${{ github.sha }}
 
-      - name: Migration Check
+      - name: Run Migrations
         env:
           SERVER_IP: ${{ steps.get_ip.outputs.ip }}
-        run: ./scripts/check-migrations-remote.sh "$SERVER_IP" ${{ github.sha }}
-
-      - name: Remote Deploy
-        env:
-          SERVER_IP: ${{ steps.get_ip.outputs.ip }}
-        run: ./scripts/deploy-remote.sh "$SERVER_IP" ${{ github.sha }}
+        run: ./scripts/migrate-remote.sh "$SERVER_IP" ${{ github.sha }}
