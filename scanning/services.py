@@ -153,11 +153,18 @@ class GrokProvider:
         if not choices:
             raise Exception("No choices returned from Grok")
 
-        message_content = choices[0].get("message", {}).get("content", "")
+        choice = choices[0]
+        finish_reason = choice.get("finish_reason")
+        message_content = choice.get("message", {}).get("content", "")
+
         try:
             return cast(dict[str, Any], json.loads(message_content)), total_tokens
         except json.JSONDecodeError as e:
-            log.error("llm_invalid_json_content", content=message_content)
+            log.error(
+                "llm_invalid_json_content",
+                content=message_content,
+                finish_reason=finish_reason,
+            )
             raise Exception(f"Grok LLM returned invalid JSON content: {e}") from e
 
     def _get_prompt(self) -> str:
@@ -254,12 +261,17 @@ class GeminiProvider:
             raise Exception("No candidates returned from Gemini")
 
         candidate = candidates[0]
+        finish_reason = candidate.get("finishReason")
         message_content = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
 
         try:
             return cast(dict[str, Any], json.loads(message_content)), total_tokens
         except json.JSONDecodeError as e:
-            log.error("llm_invalid_json_content", content=message_content)
+            log.error(
+                "llm_invalid_json_content",
+                content=message_content,
+                finish_reason=finish_reason,
+            )
             raise Exception(f"Gemini LLM returned invalid JSON content: {e}") from e
 
     def _get_prompt(self) -> str:
