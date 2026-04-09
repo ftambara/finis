@@ -44,6 +44,9 @@
                                 </svg>
                             </div>
                             <h3 class="font-bold text-rose-500">Scanning Failed</h3>
+                            {% if receipt.error.code %}
+                                <p class="text-[10px] font-mono text-rose-400/80 mt-1 uppercase tracking-wider">ERROR CODE: {{ receipt.error.code }}</p>
+                            {% endif %}
                             <p class="text-sm text-gray-500 mt-2">{{ receipt.error.message }}</p>
                         </div>
                     {% else %}

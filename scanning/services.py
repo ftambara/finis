@@ -86,6 +86,12 @@ class Requester(Protocol):
     ) -> UrlResponse: ...
 
 
+class ScanningError(Exception):
+    def __init__(self, message: str, code: ReceiptError.ErrorCode) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 class LLMProvider(Protocol):
     def process(self, receipt: Receipt) -> tuple[dict[str, Any], int]:
         """Process receipt and return (parsed_data, total_tokens)"""
@@ -142,16 +148,22 @@ class GrokProvider:
             with self.requester(req, timeout=self.timeout) as response:
                 result = json.loads(response.read().decode("utf-8"))
         except urllib.error.URLError as e:
-            raise Exception(f"Grok API call failed: {e}") from e
+            raise ScanningError(
+                f"Grok API call failed: {e}", ReceiptError.ErrorCode.PROVIDER_ERROR
+            ) from e
         except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse Grok API response: {e}") from e
+            raise ScanningError(
+                f"Failed to parse Grok API response: {e}", ReceiptError.ErrorCode.PROVIDER_ERROR
+            ) from e
 
         usage = result.get("usage", {})
         total_tokens = usage.get("total_tokens", 0)
 
         choices = result.get("choices", [])
         if not choices:
-            raise Exception("No choices returned from Grok")
+            raise ScanningError(
+                "No choices returned from Grok", ReceiptError.ErrorCode.PROVIDER_ERROR
+            )
 
         choice = choices[0]
         finish_reason = choice.get("finish_reason")
@@ -165,7 +177,10 @@ class GrokProvider:
                 content=message_content,
                 finish_reason=finish_reason,
             )
-            raise Exception(f"Grok LLM returned invalid JSON content: {e}") from e
+            code = ReceiptError.ErrorCode.INVALID_JSON
+            if finish_reason == "length":
+                code = ReceiptError.ErrorCode.RESPONSE_TRUNCATED
+            raise ScanningError(f"Grok LLM returned invalid JSON content: {e}", code) from e
 
     def _get_prompt(self) -> str:
         return (
@@ -245,9 +260,13 @@ class GeminiProvider:
             with self.requester(req, timeout=self.timeout) as response:
                 result = json.loads(response.read().decode("utf-8"))
         except urllib.error.URLError as e:
-            raise Exception(f"Gemini API call failed: {e}") from e
+            raise ScanningError(
+                f"Gemini API call failed: {e}", ReceiptError.ErrorCode.PROVIDER_ERROR
+            ) from e
         except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse Gemini API response: {e}") from e
+            raise ScanningError(
+                f"Failed to parse Gemini API response: {e}", ReceiptError.ErrorCode.PROVIDER_ERROR
+            ) from e
 
         usage_metadata = result.get("usageMetadata", {})
         total_tokens = usage_metadata.get("totalTokenCount", 0)
@@ -257,8 +276,12 @@ class GeminiProvider:
             # Check for error in response
             if "error" in result:
                 error_msg = result["error"].get("message", "Unknown Gemini error")
-                raise Exception(f"Gemini API error: {error_msg}")
-            raise Exception("No candidates returned from Gemini")
+                raise ScanningError(
+                    f"Gemini API error: {error_msg}", ReceiptError.ErrorCode.PROVIDER_ERROR
+                )
+            raise ScanningError(
+                "No candidates returned from Gemini", ReceiptError.ErrorCode.PROVIDER_ERROR
+            )
 
         candidate = candidates[0]
         finish_reason = candidate.get("finishReason")
@@ -272,7 +295,10 @@ class GeminiProvider:
                 content=message_content,
                 finish_reason=finish_reason,
             )
-            raise Exception(f"Gemini LLM returned invalid JSON content: {e}") from e
+            code = ReceiptError.ErrorCode.INVALID_JSON
+            if finish_reason == "MAX_TOKENS":
+                code = ReceiptError.ErrorCode.RESPONSE_TRUNCATED
+            raise ScanningError(f"Gemini LLM returned invalid JSON content: {e}", code) from e
 
     def _get_prompt(self) -> str:
         return (
@@ -314,7 +340,13 @@ class ReceiptProcessingService:
             log.error(
                 "organization_out_of_budget", limit=receipt.organization.spending_tier.token_limit
             )
-            ReceiptError.objects.update_or_create(receipt=receipt, defaults={"message": error_msg})
+            ReceiptError.objects.update_or_create(
+                receipt=receipt,
+                defaults={
+                    "message": error_msg,
+                    "code": ReceiptError.ErrorCode.BUDGET_EXCEEDED,
+                },
+            )
             receipt.status = Receipt.Status.FAILED
             receipt.save()
             return
@@ -329,9 +361,20 @@ class ReceiptProcessingService:
             receipt.status = Receipt.Status.COMPLETED
             receipt.save()
             log.info("receipt_processing_completed")
+        except ScanningError as e:
+            log.error("receipt_processing_failed", error=str(e), code=e.code)
+            ReceiptError.objects.update_or_create(
+                receipt=receipt,
+                defaults={"message": str(e), "code": e.code},
+            )
+            receipt.status = Receipt.Status.FAILED
+            receipt.save()
         except Exception as e:
             log.exception("receipt_processing_failed", error=str(e))
-            ReceiptError.objects.update_or_create(receipt=receipt, defaults={"message": str(e)})
+            ReceiptError.objects.update_or_create(
+                receipt=receipt,
+                defaults={"message": str(e)},
+            )
             receipt.status = Receipt.Status.FAILED
             receipt.save()
 

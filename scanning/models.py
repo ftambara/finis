@@ -47,12 +47,19 @@ class ReceiptResult(models.Model):
 
 
 class ReceiptError(models.Model):
+    class ErrorCode(models.TextChoices):
+        BUDGET_EXCEEDED = "E001", "Budget Exceeded"
+        RESPONSE_TRUNCATED = "E101", "Response Truncated"
+        INVALID_JSON = "E102", "Invalid JSON Format"
+        PROVIDER_ERROR = "E103", "Provider API Error"
+
     receipt = models.OneToOneField(
         Receipt,
         on_delete=models.CASCADE,
         primary_key=True,
         related_name="error",
     )
+    code = models.CharField(max_length=4, choices=ErrorCode.choices, null=True, blank=True)
     message = models.TextField()
 
 
