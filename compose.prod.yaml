@@ -1,26 +1,37 @@
 services:
   db:
     image: postgres:18-trixie
-    restart: always
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-finis}
-      POSTGRES_USER: ${DATABASE_USER:-finis}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${ADMIN_DATABASE_NAME:-finis}
+      POSTGRES_USER: ${ADMIN_DATABASE_USER:-finis}
+      POSTGRES_PASSWORD: ${ADMIN_DATABASE_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ADMIN_DATABASE_USER:-finis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql:rw
 
   redis:
     image: redis:8.6-trixie
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
     volumes:
       - redis_data:/data
 
-  app:
+  app: &finis
     image: finis:${IMAGE_TAG:-latest}
     restart: always
     environment:
       ALLOWED_HOSTS: finis.ftambara.com
       DATABASE_URL: postgres://${DATABASE_USER:-finis}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME:-finis}
+      ADMIN_DATABASE_URL: postgres://${ADMIN_DATABASE_USER:-finis}:${ADMIN_DATABASE_PASSWORD}@db:5432/${ADMIN_DATABASE_NAME:-finis}
       DEBUG: false
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: gemini-3-flash-preview
@@ -33,25 +44,26 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       SITE_DOMAIN: finis.ftambara.com
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
 
   worker:
-    image: finis:${IMAGE_TAG:-latest}
-    restart: always
+    <<: *finis
     command: celery -A finis worker -l info
-    environment:
-      DEBUG: "False"
-      SECRET_KEY: ${SECRET_KEY}
-      DATABASE_URL: postgres://${DATABASE_USER:-finis}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME:-finis}
-      REDIS_URL: redis://redis:6379/1
-      GROK_API_KEY: ${GROK_API_KEY}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     volumes:
       - media_volume:/app/media
 
@@ -66,7 +78,7 @@ services:
       SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
       UPSTREAM_ADDR: app:8000
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - static_volume:/var/www/static
       - media_volume:/var/www/media
       - caddy_data:/data
