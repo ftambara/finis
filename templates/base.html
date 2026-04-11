@@ -4,6 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Finis{% endblock %}</title>
+    {% if POSTHOG_ENABLED and POSTHOG_API_KEY %}
+    <script>
+        !function (t, e) {
+            var o, n, p, r;
+            e.__SV || (window.posthog = e, e._i = [], e.init = function (i, s, a) {
+                function g(t, e) {
+                    var o = e.split(".");
+                    2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function () {
+                        t.push([e].concat(Array.prototype.slice.call(arguments, 0)))
+                    }
+                }
+
+                (p = t.createElement("script")).type = "text/javascript", p.crossOrigin = "anonymous", p.async = !0, p.src = s.api_host.replace(".i.posthog.com", "-assets.i.posthog.com") + "/static/array.js", (r = t.getElementsByTagName("script")[0]).parentNode.insertBefore(p, r);
+                var u = e;
+                for (void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function (t) {
+                    var e = "posthog";
+                    return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e
+                }, u.people.toString = function () {
+                    return u.toString(1) + ".people (stub)"
+                }, o = "init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "), n = 0; n < o.length; n++) g(u, o[n]);
+                e._i.push([i, s, a])
+            }, e.__SV = 1)
+        }(document, window.posthog || []);
+        posthog.init('{{ POSTHOG_API_KEY }}', {
+            api_host: '{{ POSTHOG_HOST }}',
+        })
+    </script>
+    {% endif %}
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,11 +41,13 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
+
         .card {
             background-color: #161616;
             border: 1px solid #262626;
             border-radius: 12px;
         }
+
         .btn-primary {
             background-color: #f5f5f5;
             color: #0c0c0c;
@@ -29,9 +59,11 @@
             align-items: center;
             justify-content: center;
         }
+
         .btn-primary:active {
             transform: scale(0.98);
         }
+
         /* Mobile optimization */
         @media (max-width: 640px) {
             .container-padding {
@@ -42,13 +74,14 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <nav class="border-b border-gray-800 sticky top-0 bg-[#0c0c0c]/80 backdrop-blur-md z-50">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-            <a href="{{ url('scanning:receipt-list') }}" class="text-xl font-bold tracking-tighter">FINIS</a>
-            <div class="flex items-center space-x-6">
-                {% if request.user.is_authenticated %}
-                <a href="{{ url('scanning:receipt-list') }}" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">History</a>
-                
+<nav class="border-b border-gray-800 sticky top-0 bg-[#0c0c0c]/80 backdrop-blur-md z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+        <a href="{{ url('scanning:receipt-list') }}" class="text-xl font-bold tracking-tighter">FINIS</a>
+        <div class="flex items-center space-x-6">
+            {% if request.user.is_authenticated %}
+                <a href="{{ url('scanning:receipt-list') }}"
+                   class="text-sm font-medium text-gray-400 hover:text-white transition-colors">History</a>
+
                 <div class="hidden sm:flex flex-col items-end" title="model: {{ SCANNING_MODEL }}">
                     <div class="flex items-center space-x-2 mb-1">
                         <span class="text-[9px] text-gray-500 uppercase tracking-wider font-bold">Usage</span>
@@ -56,12 +89,13 @@
                     </div>
                     <div class="w-20 h-1 bg-gray-800 rounded-full overflow-hidden">
                         {% set usage = request.user.organization.get_usage_percentage() %}
-                        <div class="h-full {% if usage > 90 %}bg-red-500{% elif usage > 70 %}bg-yellow-500{% else %}bg-white{% endif %} transition-all duration-500" 
+                        <div class="h-full {% if usage > 90 %}bg-red-500{% elif usage > 70 %}bg-yellow-500{% else %}bg-white{% endif %} transition-all duration-500"
                              style="width: {{ usage }}%"></div>
                     </div>
                 </div>
 
-                <a href="{{ url('scanning:receipt-upload') }}" class="bg-white text-black px-4 py-1.5 rounded-full text-sm font-bold hover:opacity-90 transition-opacity">
+                <a href="{{ url('scanning:receipt-upload') }}"
+                   class="bg-white text-black px-4 py-1.5 rounded-full text-sm font-bold hover:opacity-90 transition-opacity">
                     Scan
                 </a>
                 <form action="{{ url('accounts:logout') }}" method="POST" class="inline">
@@ -70,19 +104,20 @@
                         Logout
                     </button>
                 </form>
-                {% else %}
-                <a href="{{ url('accounts:login') }}" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Login</a>
-                {% endif %}
-            </div>
+            {% else %}
+                <a href="{{ url('accounts:login') }}"
+                   class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Login</a>
+            {% endif %}
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6 sm:py-8">
-        {% block content %}{% endblock %}
-    </main>
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6 sm:py-8">
+    {% block content %}{% endblock %}
+</main>
 
-    <footer class="py-8 text-center text-gray-600 text-xs tracking-widest uppercase">
-        &copy; 2026 Finis &mdash; Private Alpha
-    </footer>
+<footer class="py-8 text-center text-gray-600 text-xs tracking-widest uppercase">
+    &copy; 2026 Finis &mdash; Private Alpha
+</footer>
 </body>
 </html>

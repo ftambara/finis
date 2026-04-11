@@ -47,9 +47,9 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
 ]
 
-posthog_enabled = env.bool("POSTHOG_ENABLED", default=True)
+POSTHOG_ENABLED = env.bool("POSTHOG_ENABLED", default=True)
 
-if posthog_enabled:
+if POSTHOG_ENABLED:
     MIDDLEWARE.append("posthog.integrations.django.PosthogContextMiddleware")
 
 ROOT_URLCONF = "finis.urls"
@@ -140,7 +140,6 @@ SCANNING_LLM_PROVIDER = env.str("SCANNING_LLM_PROVIDER", default="")
 GROK_API_KEY = env.str("GROK_API_KEY", default=None)
 GROK_API_URL = env.str("GROK_API_URL", default="https://api.x.ai/v1/chat/completions")
 GROK_MODEL = env.str("GROK_MODEL", default="grok-4.20-0309-non-reasoning")
-GROK_MAX_TOKENS = env.int("GROK_MAX_TOKENS", default=8192)
 GROK_API_TIMEOUT = env.int("GROK_API_TIMEOUT", default=180)
 
 GEMINI_API_KEY = env.str("GEMINI_API_KEY", default=None)
@@ -148,7 +147,6 @@ GEMINI_API_URL = env.str(
     "GEMINI_API_URL", default="https://generativelanguage.googleapis.com/v1beta/models"
 )
 GEMINI_MODEL = env.str("GEMINI_MODEL", default="gemini-3-flash-preview")
-GEMINI_MAX_TOKENS = env.int("GEMINI_MAX_TOKENS", default=8192)
 GEMINI_API_TIMEOUT = env.int("GEMINI_API_TIMEOUT", default=180)
 
 match SCANNING_LLM_PROVIDER:
@@ -158,6 +156,8 @@ match SCANNING_LLM_PROVIDER:
         SCANNING_MODEL = GEMINI_MODEL
     case _:
         SCANNING_MODEL = ""
+
+LLM_MAX_TOKENS = env.int("LLM_MAX_TOKENS", default=8192)
 
 # PostHog configuration
 POSTHOG_API_KEY = env.str("POSTHOG_API_KEY", default="")

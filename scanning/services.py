@@ -103,7 +103,7 @@ class GrokProvider:
         self.api_key = settings.GROK_API_KEY
         self.api_url = settings.GROK_API_URL
         self.model = settings.GROK_MODEL
-        self.max_tokens = settings.GROK_MAX_TOKENS
+        self.max_tokens = settings.LLM_MAX_TOKENS
         self.timeout = settings.GROK_API_TIMEOUT
         self.requester = requester or urllib.request.urlopen
 
@@ -208,7 +208,7 @@ class GeminiProvider:
         self.api_key: str = settings.GEMINI_API_KEY
         self.api_url = settings.GEMINI_API_URL
         self.model = settings.GEMINI_MODEL
-        self.max_tokens = settings.GEMINI_MAX_TOKENS
+        self.max_tokens = settings.LLM_MAX_TOKENS
         self.timeout = settings.GEMINI_API_TIMEOUT
         self.requester = requester or urllib.request.urlopen
 

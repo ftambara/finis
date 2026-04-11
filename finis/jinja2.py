@@ -15,4 +15,7 @@ def environment(**options: Any) -> Environment:
     env.globals["static"] = static
     env.globals["url"] = url
     env.globals["SCANNING_MODEL"] = settings.SCANNING_MODEL
+    env.globals["POSTHOG_API_KEY"] = settings.POSTHOG_API_KEY
+    env.globals["POSTHOG_HOST"] = settings.POSTHOG_HOST
+    env.globals["POSTHOG_ENABLED"] = settings.POSTHOG_ENABLED
     return env
