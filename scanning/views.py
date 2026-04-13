@@ -1,5 +1,5 @@
-from typing import Any
 import json
+from typing import Any
 from urllib.parse import unquote
 
 import posthog
@@ -49,10 +49,7 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
                 if posthog_cookie:
                     cookie_dict = json.loads(unquote(posthog_cookie))
                     if cookie_dict.get("distinct_id") and user.is_authenticated:
-                        posthog.alias(
-                            cookie_dict["distinct_id"],
-                            user.email
-                        )
+                        posthog.alias(cookie_dict["distinct_id"], user.email)
         except ValueError:
             context["has_budget"] = False
 
@@ -62,8 +59,7 @@ class ReceiptUploadView(LoginRequiredMixin, CreateView[Receipt, ReceiptUploadFor
         user = get_auth_user(self.request)
 
         if not user.organization.has_budget():
-            form.add_error(None,
-                           "Your organization has reached its monthly token limit.")
+            form.add_error(None, "Your organization has reached its monthly token limit.")
             return self.form_invalid(form)
 
         files = self.request.FILES.getlist("images")
@@ -100,8 +96,7 @@ class ReceiptStatusView(LoginRequiredMixin, View):
         receipt = get_object_or_404(Receipt, pk=pk)
 
         if request.headers.get("HX-Request"):
-            logger.info("receipt_status_poll", receipt_id=receipt.id,
-                        status=receipt.status)
+            logger.info("receipt_status_poll", receipt_id=receipt.id, status=receipt.status)
             # Simple check for mobile to return the correct partial
             user_agent = request.headers.get("User-Agent", "").lower()
             is_mobile = any(ua in user_agent for ua in ["mobile", "android", "iphone"])
