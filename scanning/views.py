@@ -109,13 +109,3 @@ class ReceiptStatusView(LoginRequiredMixin, View):
             return render(request, template, {"receipt": receipt})
 
         return redirect("scanning:receipt-detail", pk=pk)
-
-
-class DummyEventView(LoginRequiredMixin, View):
-    def get(self, request: HttpRequest) -> HttpResponse:
-        if settings.POSTHOG_ENABLED:
-            user = get_auth_user(request)
-            with posthog.new_context():
-                posthog.identify_context(user.email)
-                posthog.capture("dummy-event")
-        return HttpResponse(content=b"Event recorded.")
