@@ -14,6 +14,6 @@ fi
 echo "Applying migrations on $IP using image finis:$IMAGE_TAG..."
 
 # Run the migration using the new image against the production database
-ssh "root@$IP" "cd /app/finis && docker run --rm --env-file .env finis:$IMAGE_TAG python manage.py migrate"
+ssh "root@$IP" "cd /app/finis && IMAGE_TAG=$IMAGE_TAG docker compose -f compose.prod.yaml run --rm app python manage.py migrate"
 
 echo "Migrations applied successfully."

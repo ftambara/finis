@@ -16,6 +16,6 @@ echo "Checking for pending migrations on $IP using image finis:$IMAGE_TAG..."
 # We run the migration check using the new image against the production database
 # If it exits with 0, no migrations are pending.
 # If it exits with non-zero, migrations are pending.
-ssh "root@$IP" "cd /app/finis && docker run --rm --env-file .env finis:$IMAGE_TAG python manage.py migrate --check"
+ssh "root@$IP" "cd /app/finis && IMAGE_TAG=$IMAGE_TAG docker compose -f compose.prod.yaml run --rm app python manage.py migrate --check"
 
 echo "No pending migrations detected."
